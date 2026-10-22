@@ -19,6 +19,8 @@ Medixmart-Plus/
 
 See [the project overview](docs/project-overview.md) for the requirements and decisions derived from the source documents, and [the folder guide](docs/folder-structure.md) for directory responsibilities.
 
+Member 1's responsibility inventory, repository inspection and development-tool verification are recorded in [foundation tasks 1-3](docs/project-management/member-1-foundation.md).
+
 ## Current status
 
 This repository contains the documented folder scaffold only. The Express server, Flutter project, database schema, dependencies, and tests have not been implemented or initialized. Empty directories contain `.gitkeep` files so Git retains the structure.
