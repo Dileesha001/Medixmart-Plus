@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "node tests/integration/run_health_test.js && node tests/integration/run_auth_test.js && node tests/integration/run_rbac_test.js"
+    "test": "node tests/integration/run_health_test.js && node tests/integration/run_auth_test.js && node tests/integration/run_rbac_test.js && node tests/integration/run_error_test.js"
   },
   "keywords": [
     "medixmart",
