@@ -89,7 +89,23 @@ const login = async (req, res) => {
   );
 };
 
+/**
+ * Retrieve current authenticated user profile.
+ * GET /api/auth/me
+ */
+const getProfile = async (req, res) => {
+  return successResponse(
+    res,
+    {
+      user: req.user
+    },
+    {},
+    200
+  );
+};
+
 module.exports = {
-  login
+  login,
+  getProfile
 };
 

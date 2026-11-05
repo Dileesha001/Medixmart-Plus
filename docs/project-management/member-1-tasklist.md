@@ -114,15 +114,15 @@ flowchart TD
   - **Dependencies:** M3 `users` table.
   - **Verification:** Verified via [`tests/integration/run_auth_test.js`](../../medixmart-backend/tests/integration/run_auth_test.js): valid credentials return 200 with 8h JWT; invalid password/user returns 401; disabled accounts return 403; empty inputs return 400.
 
-- [ ] **M1-W2-02: Protect Routes and Roles (+)**
-  - **Deliverable:** Bearer token authentication and RBAC middleware.
+- [x] **M1-W2-02: Protect Routes and Roles (+)**
+  - **Deliverable:** Bearer token authentication and RBAC middleware in [`src/middleware/auth.js`](../../medixmart-backend/src/middleware/auth.js) and [`src/middleware/roles.js`](../../medixmart-backend/src/middleware/roles.js).
   - **Action Items:**
-    - Create `src/middleware/auth.js` to extract and verify `Authorization: Bearer <token>`.
-    - Handle missing, expired, and malformed tokens with standard `401 Unauthorized`.
-    - Create `src/middleware/roles.js` supporting role hierarchies (e.g., `requireRole('admin')`, `requireRole(['admin', 'pharmacist'])`).
-    - Protect all sensitive route skeletons.
+    - [x] Create `src/middleware/auth.js` extracting and verifying Bearer tokens, rejecting missing, expired, and tampered tokens, and checking active user DB status.
+    - [x] Handle missing tokens (`AUTH_MISSING_TOKEN`, 401), malformed/invalid tokens (`AUTH_INVALID_TOKEN`, 401), and expired tokens (`AUTH_EXPIRED_TOKEN`, 401).
+    - [x] Create `src/middleware/roles.js` supporting role authorization (`requireRole('admin')`, `requireRole('admin', 'pharmacist')`), returning 403 `AUTH_FORBIDDEN_ROLE` on unauthorized attempts.
+    - [x] Expose protected session verification endpoint `GET /api/auth/me` and role-restricted routes.
   - **Dependencies:** M1-W2-01.
-  - **Verification:** Unauthenticated requests receive 401; Pharmacist accessing Admin routes receives 403.
+  - **Verification:** Verified via [`tests/integration/run_rbac_test.js`](../../medixmart-backend/tests/integration/run_rbac_test.js): missing/invalid/expired tokens return 401; Pharmacist blocked from admin route (403); Admin and Pharmacist permitted on authorized routes (200).
 
 - [ ] **M1-W2-03: Integrate Login with Flutter**
   - **Deliverable:** Working authentication loop between Flutter client and Express.
