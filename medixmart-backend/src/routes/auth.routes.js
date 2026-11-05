@@ -16,6 +16,9 @@ router.post('/login', asyncHandler(authController.login));
 // GET /api/auth/me - Protected session verification
 router.get('/me', authenticate, asyncHandler(authController.getProfile));
 
+// POST /api/auth/logout - Session logout
+router.post('/logout', authenticate, asyncHandler(authController.logout));
+
 // Role authorization verification endpoints
 router.get(
   '/admin-only',

@@ -107,7 +107,7 @@ async function runRBACTests() {
   console.log('       Passed: Admin access granted on admin-only route.');
 
   // Step 10: Both roles allowed on staff-only endpoint
-  console.log('\n[10/10] Testing both roles on staff-only route...');
+  console.log('\n[10/11] Testing both roles on staff-only route...');
   const pharmStaffRes = await request(app)
     .get('/api/auth/staff-only')
     .set('Authorization', `Bearer ${pharmToken}`);
@@ -121,8 +121,21 @@ async function runRBACTests() {
   assert.strictEqual(adminStaffRes.body.data.message, 'Staff access granted.');
   console.log('       Passed: Both Pharmacist and Admin granted access to staff-only route.');
 
+  // Step 11: Test logout endpoint
+  console.log('\n[11/11] Testing POST /api/auth/logout...');
+  const unauthLogout = await request(app).post('/api/auth/logout');
+  assert.strictEqual(unauthLogout.statusCode, 401, 'Unauthenticated logout should return 401');
+
+  const authLogout = await request(app)
+    .post('/api/auth/logout')
+    .set('Authorization', `Bearer ${adminToken}`);
+  assert.strictEqual(authLogout.statusCode, 200, 'Authenticated logout should return 200');
+  assert.strictEqual(authLogout.body.success, true);
+  assert.strictEqual(authLogout.body.data.message, 'Successfully logged out.');
+  console.log('       Passed: POST /api/auth/logout authenticated and verified.');
+
   console.log('\n====================================================');
-  console.log(' All M1-W2-02 tests passed successfully!');
+  console.log(' All M1-W2-02 & M1-W2-03 tests passed successfully!');
   console.log('====================================================');
 }
 

@@ -104,8 +104,24 @@ const getProfile = async (req, res) => {
   );
 };
 
+/**
+ * Log out user session.
+ * POST /api/auth/logout
+ */
+const logout = async (req, res) => {
+  return successResponse(
+    res,
+    {
+      message: 'Successfully logged out.'
+    },
+    {},
+    200
+  );
+};
+
 module.exports = {
   login,
-  getProfile
+  getProfile,
+  logout
 };
 
