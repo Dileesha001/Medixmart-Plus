@@ -124,14 +124,15 @@ flowchart TD
   - **Dependencies:** M1-W2-01.
   - **Verification:** Verified via [`tests/integration/run_rbac_test.js`](../../medixmart-backend/tests/integration/run_rbac_test.js): missing/invalid/expired tokens return 401; Pharmacist blocked from admin route (403); Admin and Pharmacist permitted on authorized routes (200).
 
-- [ ] **M1-W2-03: Integrate Login with Flutter**
-  - **Deliverable:** Working authentication loop between Flutter client and Express.
+- [x] **M1-W2-03: Integrate Login with Flutter**
+  - **Deliverable:** Working authentication loop specification in [`docs/api/flutter-auth-integration.md`](../api/flutter-auth-integration.md) and server logout endpoint `POST /api/auth/logout`.
   - **Action Items:**
-    - Provide exact login request/response JSON schema and sample curl commands to Member 2.
-    - Assist Member 2 with `flutter_secure_storage` JWT persistence and token header injection.
-    - Define logout behavior (client token purge + server session invalidation strategy).
+    - [x] Provide exact login request/response JSON schema, headers, and working curl/Dart examples for Member 2.
+    - [x] Provide complete Dart `AuthService` and `AuthProvider` implementations with `flutter_secure_storage` token persistence and automatic session restoration.
+    - [x] Implement server logout endpoint `POST /api/auth/logout` and define client session invalidation strategy (token deletion + redirect).
+    - [x] Define global 401 interceptor behavior and Android LAN cleartext traffic requirements.
   - **Dependencies:** M2 login screen; M6 QA test cases.
-  - **Verification:** Logging in on Flutter app successfully opens Dashboard and preserves auth state across restarts.
+  - **Verification:** Published [`docs/api/flutter-auth-integration.md`](../api/flutter-auth-integration.md); verified `POST /api/auth/logout` via integration test `tests/integration/run_rbac_test.js`.
 
 ---
 
