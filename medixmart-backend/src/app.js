@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const config = require('./config/environment');
 const db = require('./config/db');
 const { successResponse, errorResponse } = require('./utils/response');
+const authRoutes = require('./routes/auth.routes');
 
 const app = express();
 
@@ -65,6 +66,9 @@ app.get('/', (req, res) => {
     health: '/api/health'
   });
 });
+
+// Mount feature routes
+app.use('/api/auth', authRoutes);
 
 // 404 handler
 app.use((req, res) => {

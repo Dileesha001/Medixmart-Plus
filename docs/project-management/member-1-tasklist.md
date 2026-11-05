@@ -102,16 +102,17 @@ flowchart TD
 ### Week 2: Authentication, Authorization & Client Handshake
 *Target Milestone: Secure login, 8-hour JWTs, Admin/Pharmacist role enforcement, and Flutter AuthProvider connection.*
 
-- [ ] **M1-W2-01: Implement Login and Admin Seed**
+- [x] **M1-W2-01: Implement Login and Admin Seed**
   - **Deliverable:** Working `/api/auth/login` endpoint and idempotent admin seeding script.
   - **Action Items:**
-    - Coordinate `users` table schema with Member 3 (`id`, `username`, `password_hash`, `role`, `is_active`, `created_at`).
-    - Write seed script `src/sql/seed_admin.js` hashing the initial admin password with bcrypt (cost factor >= 10).
-    - Implement login controller: validate inputs, look up active user via parameterized SQL, verify hash with `bcrypt.compare`.
-    - Issue signed JWT containing `{ sub: user.id, username, role }` with 8-hour expiration.
-    - Reject inactive/disabled accounts with specific `403 Account Disabled` response.
+    - [x] Coordinate `users` table schema with Member 3 in [`src/sql/01_create_users_table.sql`](../../medixmart-backend/src/sql/01_create_users_table.sql) (`id`, `username`, `password_hash`, `role`, `is_active`, `created_at`, `updated_at`).
+    - [x] Write idempotent seed script [`src/sql/seed_admin.js`](../../medixmart-backend/src/sql/seed_admin.js) hashing initial admin password with bcrypt (cost factor >= 10).
+    - [x] Implement login controller in [`src/controllers/auth.controller.js`](../../medixmart-backend/src/controllers/auth.controller.js): validate inputs, look up active user via parameterized SQL, verify hash with `bcrypt.compare`.
+    - [x] Issue signed JWT containing `{ sub: user.id, username, role }` with 8-hour expiration.
+    - [x] Reject inactive/disabled accounts with specific `403 Account Disabled` response (`AUTH_ACCOUNT_DISABLED`).
+    - [x] Wire up authentication routes in [`src/routes/auth.routes.js`](../../medixmart-backend/src/routes/auth.routes.js) mounted at `/api/auth`.
   - **Dependencies:** M3 `users` table.
-  - **Verification:** Valid credentials return 200 with JWT; invalid return 401; disabled accounts return 403.
+  - **Verification:** Verified via [`tests/integration/run_auth_test.js`](../../medixmart-backend/tests/integration/run_auth_test.js): valid credentials return 200 with 8h JWT; invalid password/user returns 401; disabled accounts return 403; empty inputs return 400.
 
 - [ ] **M1-W2-02: Protect Routes and Roles (+)**
   - **Deliverable:** Bearer token authentication and RBAC middleware.
