@@ -1,5 +1,6 @@
 const request = require('supertest');
 const app = require('../../src/app');
+const db = require('../../src/config/db');
 const assert = require('assert');
 
 async function run() {
@@ -21,10 +22,13 @@ async function run() {
   assert.strictEqual(res404.body.error.code, 'ROUTE_NOT_FOUND', 'Code should be ROUTE_NOT_FOUND');
 
   console.log('[TEST] All assertions passed successfully!');
+  await db.closePool();
+  process.exit(0);
 }
 
-run().catch((err) => {
+run().catch(async (err) => {
   console.error('[TEST FAILED]', err);
+  await db.closePool();
   process.exit(1);
 });
 
