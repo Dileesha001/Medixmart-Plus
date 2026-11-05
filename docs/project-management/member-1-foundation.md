@@ -92,3 +92,4 @@ The generated development administrator credential is stored in Git-ignored `sec
 The winget PostgreSQL download failed with HTTP 403. The fallback downloaded the same vendor installer directly and verified SHA-256 `612c7f5400a003aaffa0372cb273eed52278f93c680ab911eb9cb2229e329072` before successful unattended installation. pgAdmin installed through winget.
 
 This document records local work. Team review and merge required by the blueprint remain separate release-workflow steps; no review or merge is claimed here.
+
