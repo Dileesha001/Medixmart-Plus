@@ -1,0 +1,45 @@
+name: medixmart_app
+description: Medixmart Plus pharmacy management system client for Windows and Android.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2
+  http: ^1.2.2
+  flutter_secure_storage: ^9.2.2
+  flutter_svg: ^2.0.10+1
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/brand_emblem.png
+    - assets/icons/status_dot_in_stock.svg
+    - assets/icons/status_dot_warning.svg
+    - assets/icons/status_dot_danger.svg
+    - assets/icons/icon_alert_triangle.svg
+    - assets/icons/icon_clock.svg
+    - assets/icons/icon_package.svg
+    - assets/icons/icon_credit_card.svg
+    - assets/icons/icon_cart.svg
+    - assets/icons/icon_search.svg
+    - assets/icons/nav_dashboard.svg
+    - assets/icons/nav_checkout.svg
+    - assets/icons/nav_medicines.svg
+    - assets/icons/nav_receive_batches.svg
+    - assets/icons/nav_alerts.svg
+    - assets/icons/nav_customers.svg
+    - assets/icons/nav_reports.svg
+    - assets/icons/icon_plus_md.svg
+    - assets/icons/icon_receive_batch_sm.svg
+    - assets/icons/icon_plus_sm.svg
