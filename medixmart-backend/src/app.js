@@ -8,6 +8,8 @@ const config = require('./config/environment');
 const db = require('./config/db');
 const { successResponse, errorResponse } = require('./utils/response');
 const authRoutes = require('./routes/auth.routes');
+const notFoundHandler = require('./middleware/notFound');
+const errorHandler = require('./middleware/error');
 
 const app = express();
 
@@ -70,26 +72,11 @@ app.get('/', (req, res) => {
 // Mount feature routes
 app.use('/api/auth', authRoutes);
 
-// 404 handler
-app.use((req, res) => {
-  return errorResponse(
-    res,
-    'ROUTE_NOT_FOUND',
-    `The requested endpoint '${req.method} ${req.originalUrl}' does not exist.`,
-    404
-  );
-});
+// 404 Catch-All Handler
+app.use(notFoundHandler);
 
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error('[SERVER ERROR]', err);
-  
-  const status = err.status || 500;
-  const message = config.isProduction ? 'Internal Server Error' : err.message;
-  const code = err.code || 'INTERNAL_SERVER_ERROR';
-  
-  return errorResponse(res, code, message, status, err.details || null);
-});
+// Centralized Global Error Handler
+app.use(errorHandler);
 
 module.exports = app;
 

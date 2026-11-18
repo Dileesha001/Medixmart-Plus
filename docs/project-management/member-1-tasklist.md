@@ -141,17 +141,18 @@ flowchart TD
 ### Week 3: Error Standardization, Security Gaps & Inventory API Review
 *Target Milestone: Bulletproof error handling, password reset lifecycle, and merged inventory endpoints.*
 
-- [ ] **M1-W3-01: Standardize Errors and Async Handling**
-  - **Deliverable:** Robust error middleware and safe response masking in `src/middleware/error.js`.
+- [x] **M1-W3-01: Standardize Errors and Async Handling**
+  - **Deliverable:** Centralized error classes in [`src/utils/errors.js`](../../medixmart-backend/src/utils/errors.js), 404 handler in [`src/middleware/notFound.js`](../../medixmart-backend/src/middleware/notFound.js), and global error middleware in [`src/middleware/error.js`](../../medixmart-backend/src/middleware/error.js).
   - **Action Items:**
-    - Implement `asyncHandler` wrapper (`src/utils/asyncHandler.js`) to catch rejected promises without repetitive try/catch.
-    - Create custom application error classes (`AppError`, `ValidationError`, `NotFoundError`, `UnauthorizedError`).
-    - Implement global 4-argument Express error handler:
-      - Map PostgreSQL error codes (e.g., `23505` unique violation, `23503` foreign key violation) to clean client messages.
-      - Strip stack traces, SQL internals, and database passwords from production responses.
-    - Implement 404 handler for unrecognized routes.
+    - [x] Implement `asyncHandler` wrapper (`src/utils/asyncHandler.js`) to catch rejected promises without repetitive try/catch.
+    - [x] Create custom application error classes (`AppError`, `ValidationError`, `NotFoundError`, `UnauthorizedError`, `ForbiddenError`, `ConflictError`, `DatabaseError`).
+    - [x] Implement global 4-argument Express error handler:
+      - [x] Map PostgreSQL error codes (`23505` unique violation to 409 `DUPLICATE_ENTRY`, `23503` FK to 409 `FOREIGN_KEY_VIOLATION`, `23502` not-null to 400 `MISSING_REQUIRED_FIELD`, `22P02` to 400 `INVALID_INPUT_FORMAT`).
+      - [x] Handle body-parser JSON syntax errors (400 `MALFORMED_JSON`) and JWT signature/expiry errors.
+      - [x] Strip stack traces, SQL internals, and database passwords from production responses.
+    - [x] Implement dedicated 404 handler for unrecognized routes (`ROUTE_NOT_FOUND`).
   - **Dependencies:** Week 1 API contracts.
-  - **Verification:** Deliberate errors return consistent `{ success: false, error: ... }` with no leaked server internals.
+  - **Verification:** Verified via [`tests/integration/run_error_test.js`](../../medixmart-backend/tests/integration/run_error_test.js): 404 routes, malformed JSON, AppError subclasses, PostgreSQL unique collisions, and production error masking all pass assertions.
 
 - [ ] **M1-W3-02: Review and Stabilize Inventory APIs**
   - **Deliverable:** Code review and security sign-off for Member 3's category and medicine APIs.
