@@ -154,15 +154,18 @@ flowchart TD
   - **Dependencies:** Week 1 API contracts.
   - **Verification:** Verified via [`tests/integration/run_error_test.js`](../../medixmart-backend/tests/integration/run_error_test.js): 404 routes, malformed JSON, AppError subclasses, PostgreSQL unique collisions, and production error masking all pass assertions.
 
-- [ ] **M1-W3-02: Review and Stabilize Inventory APIs**
-  - **Deliverable:** Code review and security sign-off for Member 3's category and medicine APIs.
+- [x] **M1-W3-02: Review and Stabilize Inventory APIs**
+  - **Deliverable:** Stabilized relational schema in [`src/sql/02_create_inventory_tables.sql`](../../medixmart-backend/src/sql/02_create_inventory_tables.sql), categories endpoints in [`src/controllers/category.controller.js`](../../medixmart-backend/src/controllers/category.controller.js), and medicines CRUD in [`src/controllers/medicine.controller.js`](../../medixmart-backend/src/controllers/medicine.controller.js).
   - **Action Items:**
-    - Review `GET/POST /api/categories` and `GET/POST/PUT /api/medicines`.
-    - Verify all queries use parameterized SQL `$1, $2` to prevent injection.
-    - Check safe deactivation logic: medicines should set `is_active = false` instead of hard deletion.
-    - Ensure connection release in both `try` and `finally` blocks.
-  - **Dependencies:** M3 inventory API pull requests.
-  - **Verification:** Inventory endpoints merged into `dev` branch with passing unit tests.
+    - [x] Review and establish `categories` and `medicines` relational schema with non-negative constraints (`CHECK >= 0`), unique constraints, and indexes.
+    - [x] Implement `GET /api/categories` and `POST /api/categories` with duplicate name detection (409 `DUPLICATE_ENTRY`).
+    - [x] Implement `GET /api/medicines` with ILIKE search, category filtering, sort whitelisting, and standard pagination.
+    - [x] Implement `POST /api/medicines` and `PUT /api/medicines/:id` verifying category existence and unique name+strength combinations.
+    - [x] Enforce parameterized SQL `$1, $2` and connection release across all queries.
+    - [x] Implement safe medicine soft-deactivation (`PATCH /api/medicines/:id/deactivate`) setting `is_active = false` without breaking sales history foreign keys.
+    - [x] Enforce RBAC matrix: Pharmacist allowed read-only access (200), Admin allowed mutation access (403 on unauthorized calls).
+  - **Dependencies:** M3 inventory API contracts.
+  - **Verification:** Verified via [`tests/integration/run_inventory_test.js`](../../medixmart-backend/tests/integration/run_inventory_test.js): Category and medicine CRUD, uniqueness constraints, RBAC guards, pagination, and soft-deactivation pass 12/12 assertions.
 
 - [ ] **M1-W3-03: Close Security Lifecycle Gaps (+)**
   - **Deliverable:** Password change endpoint and session invalidation rules.

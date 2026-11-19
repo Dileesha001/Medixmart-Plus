@@ -8,6 +8,8 @@ const config = require('./config/environment');
 const db = require('./config/db');
 const { successResponse, errorResponse } = require('./utils/response');
 const authRoutes = require('./routes/auth.routes');
+const categoryRoutes = require('./routes/category.routes');
+const medicineRoutes = require('./routes/medicine.routes');
 const notFoundHandler = require('./middleware/notFound');
 const errorHandler = require('./middleware/error');
 
@@ -71,6 +73,8 @@ app.get('/', (req, res) => {
 
 // Mount feature routes
 app.use('/api/auth', authRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/medicines', medicineRoutes);
 
 // 404 Catch-All Handler
 app.use(notFoundHandler);
