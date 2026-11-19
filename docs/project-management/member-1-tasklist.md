@@ -183,14 +183,16 @@ flowchart TD
 ### Week 4: Client Connectivity, Integration Guides & Schema Harmonization
 *Target Milestone: Seamless Windows/Android LAN connectivity, shared API guide, and unified backend contracts.*
 
-- [ ] **M1-W4-01: Enable Client/Server Connectivity**
-  - **Deliverable:** Cross-device network access configuration.
+- [x] **M1-W4-01: Enable Client/Server Connectivity**
+  - **Deliverable:** Cross-device network access configuration in [`src/server.js`](../../medixmart-backend/src/server.js), [`src/app.js`](../../medixmart-backend/src/app.js), and [`src/config/environment.js`](../../medixmart-backend/src/config/environment.js).
   - **Action Items:**
-    - Configure `cors` middleware with configurable allowed origins (Flutter web, local desktop, mobile IP subnet).
-    - Bind Express server to `0.0.0.0` (all network interfaces) rather than `localhost` only.
-    - Validate connectivity across local Windows loopback (`127.0.0.1`) and LAN Wi-Fi IP (`192.168.x.x`).
+    - [x] Configure `cors` middleware with configurable allowed origins (supporting Flutter web localhost dev ports, local desktop, curl/Dio mobile clients with no origin header, and local private LAN subnets `192.168.x.x`, `172.x.x.x`, `10.x.x.x`).
+    - [x] Set Helmet `Cross-Origin-Resource-Policy` to `cross-origin` to ensure static assets and API calls are not blocked across web origins.
+    - [x] Bind Express server to `0.0.0.0` (all network interfaces) via configurable `HOST` environment variable.
+    - [x] Enumerate and display all active IPv4 interfaces and Android Emulator loopback alias (`10.0.2.2`) during server boot.
+    - [x] Validate connectivity across local loopback (`127.0.0.1`), external LAN interface (`192.168.56.1` / Wi-Fi), and browser preflight `OPTIONS`.
   - **Dependencies:** M2 desktop/mobile client shells.
-  - **Verification:** Android emulator / physical device reaches `http://<host-ip>:<port>/api/health`.
+  - **Verification:** Verified via [`tests/integration/run_connectivity_test.js`](../../medixmart-backend/tests/integration/run_connectivity_test.js): Loopback, LAN socket binding, Flutter Web preflight, LAN CORS preflight, native client headers, and Helmet CORP all pass 6/6 assertions.
 
 - [ ] **M1-W4-02: Publish Flutter API Integration Guide**
   - **Deliverable:** `docs/api/flutter-integration-guide.md`.

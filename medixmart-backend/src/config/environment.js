@@ -29,6 +29,7 @@ if (missing.length > 0) {
 const config = {
   env: process.env.NODE_ENV || 'development',
   isProduction: process.env.NODE_ENV === 'production',
+  host: process.env.HOST || '0.0.0.0',
   port: parseInt(process.env.PORT, 10) || 3000,
   
   db: {

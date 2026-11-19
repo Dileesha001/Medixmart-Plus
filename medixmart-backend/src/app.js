@@ -17,12 +17,50 @@ const errorHandler = require('./middleware/error');
 const app = express();
 
 // Security and utility middleware
-app.use(helmet());
-app.use(cors({
-  origin: config.cors.origin === '*' ? '*' : config.cors.origin.split(','),
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
 }));
+
+// Cross-Device & Multi-Platform CORS Configuration
+const parseCorsOrigins = () => {
+  if (!config.cors.origin || config.cors.origin === '*') {
+    return '*';
+  }
+  return config.cors.origin.split(',').map((o) => o.trim());
+};
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // 1. Allow mobile apps, curl, desktop clients (requests with no origin header)
+    if (!origin) return callback(null, true);
+
+    const configured = parseCorsOrigins();
+    if (configured === '*') {
+      return callback(null, true);
+    }
+
+    if (configured.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // 2. Automatically permit local loopback & LAN subnets in non-production
+    if (!config.isProduction) {
+      const isLocalOrLan = /^https?:\/\/(localhost|127\.0\.0\.1|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/.test(origin);
+      if (isLocalOrLan) {
+        return callback(null, true);
+      }
+    }
+
+    // Reject unrecognized origin
+    return callback(null, false);
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  credentials: true,
+  maxAge: 86400
+};
+
+app.use(cors(corsOptions));
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
