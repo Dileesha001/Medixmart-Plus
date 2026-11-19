@@ -7,12 +7,19 @@ const path = require('path');
 const db = require('../config/db');
 
 const applySchema = async () => {
-  const schemaPath = path.join(__dirname, '01_create_users_table.sql');
-  const sql = fs.readFileSync(schemaPath, 'utf8');
+  const sqlDir = __dirname;
+  const files = fs
+    .readdirSync(sqlDir)
+    .filter((f) => /^\d+_create_.*\.sql$/.test(f))
+    .sort();
 
-  console.log('[DB] Applying users table schema...');
-  await db.query(sql);
-  console.log('[DB] Users table schema applied successfully.');
+  for (const file of files) {
+    const filePath = path.join(sqlDir, file);
+    const sql = fs.readFileSync(filePath, 'utf8');
+    console.log(`[DB] Applying schema from ${file}...`);
+    await db.query(sql);
+    console.log(`[DB] Successfully applied ${file}.`);
+  }
 };
 
 if (require.main === module) {
