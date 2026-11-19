@@ -194,14 +194,17 @@ flowchart TD
   - **Dependencies:** M2 desktop/mobile client shells.
   - **Verification:** Verified via [`tests/integration/run_connectivity_test.js`](../../medixmart-backend/tests/integration/run_connectivity_test.js): Loopback, LAN socket binding, Flutter Web preflight, LAN CORS preflight, native client headers, and Helmet CORP all pass 6/6 assertions.
 
-- [ ] **M1-W4-02: Publish Flutter API Integration Guide**
-  - **Deliverable:** `docs/api/flutter-integration-guide.md`.
+- [x] **M1-W4-02: Publish Flutter API Integration Guide**
+  - **Deliverable:** Master integration guide in [`docs/api/flutter-integration-guide.md`](../api/flutter-integration-guide.md).
   - **Action Items:**
-    - Document standard headers (`Authorization: Bearer <jwt>`, `Content-Type: application/json`).
-    - Provide complete Flutter `http` / `dio` request snippet with error parsing.
-    - Document common pitfalls: Android `CleartextTraffic` permission for HTTP LAN IPs, connection timeouts, base URL switching.
+    - [x] Document system topology (single Windows pharmacy host PC, LAN loopback, and Wi-Fi subnets).
+    - [x] Document standard request headers (`Authorization: Bearer <jwt>`, `Content-Type: application/json`, `Accept: application/json`) and standardized JSON envelopes (success, paginated, error).
+    - [x] Provide complete Dart `ApiConfig` multi-platform host resolver (Windows loopback `127.0.0.1`, Android emulator `10.0.2.2`, physical device LAN IP, and Flutter Web).
+    - [x] Provide complete Dart network layer (`ApiException`, `ApiErrorDetail`, and `ApiClient` using `package:http`) with connection timeouts, Bearer token injection, and automatic session revocation callback on 401.
+    - [x] Provide exact JSON request/response schemas for Auth, Password Rotation, Categories, Medicines & Soft-Deactivation, User Management with Admin Self-Lockout safeguards, and System Health.
+    - [x] Document common pitfalls: Android `CleartextTraffic` permission, Windows Firewall port 3000 rules, and FEFO 7-month expiry standard.
   - **Dependencies:** M2 API service.
-  - **Verification:** Member 2 reproduces end-to-end API calls directly from the guide.
+  - **Verification:** Published [`docs/api/flutter-integration-guide.md`](../api/flutter-integration-guide.md); verified compatibility against active `medixmart_app` architecture and backend routes.
 
 - [ ] **M1-W4-03: Resolve Integration and Schema Issues**
   - **Deliverable:** Multi-member schema and transaction harmonization.
