@@ -3,6 +3,7 @@
  * Binds the Express app to host and port, handles startup verification and graceful shutdown.
  */
 const http = require('http');
+const os = require('os');
 const config = require('./config/environment');
 const db = require('./config/db');
 const app = require('./app');
@@ -19,14 +20,27 @@ const startServer = async () => {
       console.warn(`[DB WARNING] Database connection failed at startup: ${dbTest.error}`);
     }
 
-    // Bind to 0.0.0.0 to enable local network (LAN) access for desktop & Android
-    server.listen(config.port, '0.0.0.0', () => {
+    // Bind to 0.0.0.0 (or configured HOST) to enable local network (LAN) access for desktop & Android
+    server.listen(config.port, config.host, () => {
       console.log(`=======================================================`);
       console.log(` Medixmart Plus Backend API`);
-      console.log(` Running in:   ${config.env} mode`);
-      console.log(` Local URL:    http://127.0.0.1:${config.port}`);
-      console.log(` Health check: http://127.0.0.1:${config.port}/api/health`);
-      console.log(` Timezone:     ${config.business.timezone}`);
+      console.log(` Running in:       ${config.env} mode`);
+      console.log(` Listening on:     ${config.host}:${config.port}`);
+      console.log(` Local Loopback:   http://127.0.0.1:${config.port}`);
+
+      // Enumerate and display active IPv4 interfaces for mobile and cross-device testing
+      const interfaces = os.networkInterfaces();
+      for (const name of Object.keys(interfaces)) {
+        for (const net of interfaces[name]) {
+          if (net.family === 'IPv4' && !net.internal) {
+            console.log(` LAN Interface:    http://${net.address}:${config.port} (${name})`);
+          }
+        }
+      }
+
+      console.log(` Android Emulator: http://10.0.2.2:${config.port}`);
+      console.log(` Health check:     http://127.0.0.1:${config.port}/api/health`);
+      console.log(` Timezone:         ${config.business.timezone}`);
       console.log(`=======================================================`);
     });
   } catch (err) {

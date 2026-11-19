@@ -24,3 +24,4 @@ router.patch('/:id/status', asyncHandler(userController.updateUserStatus));
 router.patch('/:id/role', asyncHandler(userController.updateUserRole));
 
 module.exports = router;
+
