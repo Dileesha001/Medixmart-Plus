@@ -40,7 +40,7 @@ const authenticate = async (req, res, next) => {
 
     // 4. Verify that the user still exists and is active in the database
     const queryText = `
-      SELECT id, username, role, is_active
+      SELECT id, username, role, is_active, token_version
       FROM users
       WHERE id = $1
     `;
@@ -66,11 +66,22 @@ const authenticate = async (req, res, next) => {
       );
     }
 
+    // Invalidate session if token version is outdated (e.g. password change)
+    if (decoded.token_version !== undefined && decoded.token_version !== user.token_version) {
+      return errorResponse(
+        res,
+        'AUTH_SESSION_REVOKED',
+        'Your session has been invalidated due to a password change or security update. Please log in again.',
+        401
+      );
+    }
+
     // 5. Attach authenticated user object to the request
     req.user = {
       id: user.id,
       username: user.username,
-      role: user.role
+      role: user.role,
+      token_version: user.token_version
     };
 
     next();

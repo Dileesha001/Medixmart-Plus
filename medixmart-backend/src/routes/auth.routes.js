@@ -16,6 +16,9 @@ router.post('/login', asyncHandler(authController.login));
 // GET /api/auth/me - Protected session verification
 router.get('/me', authenticate, asyncHandler(authController.getProfile));
 
+// PUT /api/auth/change-password - Change password & invalidate previous sessions
+router.put('/change-password', authenticate, asyncHandler(authController.changePassword));
+
 // POST /api/auth/logout - Session logout
 router.post('/logout', authenticate, asyncHandler(authController.logout));
 

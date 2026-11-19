@@ -167,15 +167,16 @@ flowchart TD
   - **Dependencies:** M3 inventory API contracts.
   - **Verification:** Verified via [`tests/integration/run_inventory_test.js`](../../medixmart-backend/tests/integration/run_inventory_test.js): Category and medicine CRUD, uniqueness constraints, RBAC guards, pagination, and soft-deactivation pass 12/12 assertions.
 
-- [ ] **M1-W3-03: Close Security Lifecycle Gaps (+)**
-  - **Deliverable:** Password change endpoint and session invalidation rules.
+- [x] **M1-W3-03: Close Security Lifecycle Gaps (+)**
+  - **Deliverable:** Password change endpoint and session invalidation rules in [`src/controllers/auth.controller.js`](../../medixmart-backend/src/controllers/auth.controller.js), [`src/middleware/auth.js`](../../medixmart-backend/src/middleware/auth.js), and user management controller [`src/controllers/user.controller.js`](../../medixmart-backend/src/controllers/user.controller.js).
   - **Action Items:**
-    - Implement `PUT /api/auth/change-password` requiring current password verification before saving new bcrypt hash.
-    - Enforce password strength policies.
-    - Define session invalidation mechanism (e.g., token versioning or `password_changed_at` timestamp check).
-    - Document role matrix and prevent self-lockout (ensuring at least one active Admin always remains).
+    - [x] Create migration [`src/sql/03_add_user_security_fields.sql`](../../medixmart-backend/src/sql/03_add_user_security_fields.sql) adding `token_version` and `password_changed_at`.
+    - [x] Implement `PUT /api/auth/change-password` requiring current password verification, length checks (min 8 characters), and confirmation matching before saving bcrypt hash.
+    - [x] Implement token version increment on credential rotation and enforce session invalidation in `src/middleware/auth.js` (rejecting stale tokens with 401 `AUTH_SESSION_REVOKED`).
+    - [x] Build administrative user management endpoints (`PATCH /api/users/:id/status`, `PATCH /api/users/:id/role`) with self-lockout prevention (blocking deactivation or demotion of the last remaining active Administrator account with 403 `AUTH_LAST_ADMIN_PROTECTED`).
+    - [x] Terminate sessions immediately when an account is disabled.
   - **Dependencies:** M2 Auth UI; M6 QA.
-  - **Verification:** Password change succeeds; old password cannot be reused for login; former token invalidated.
+  - **Verification:** Verified via [`tests/integration/run_security_lifecycle_test.js`](../../medixmart-backend/tests/integration/run_security_lifecycle_test.js): Password rotation, session invalidation, old token rejection, new password login, and last-admin lockout guards all pass 10/10 assertions.
 
 ---
 
