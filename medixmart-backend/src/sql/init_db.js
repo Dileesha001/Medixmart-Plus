@@ -10,7 +10,7 @@ const applySchema = async () => {
   const sqlDir = __dirname;
   const files = fs
     .readdirSync(sqlDir)
-    .filter((f) => /^\d+_create_.*\.sql$/.test(f))
+    .filter((f) => /^\d+_.*\.sql$/.test(f))
     .sort();
 
   for (const file of files) {
