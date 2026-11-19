@@ -206,14 +206,16 @@ flowchart TD
   - **Dependencies:** M2 API service.
   - **Verification:** Published [`docs/api/flutter-integration-guide.md`](../api/flutter-integration-guide.md); verified compatibility against active `medixmart_app` architecture and backend routes.
 
-- [ ] **M1-W4-03: Resolve Integration and Schema Issues**
-  - **Deliverable:** Multi-member schema and transaction harmonization.
+- [x] **M1-W4-03: Resolve Integration and Schema Issues**
+  - **Deliverable:** Multi-member schema and transaction harmonization in [`src/sql/04_create_harmonized_core_schema.sql`](../../medixmart-backend/src/sql/04_create_harmonized_core_schema.sql).
   - **Action Items:**
-    - Coordinate schema reviews between M3 (batches/inventory), M4 (sales/payments), and M5 (customers/credit).
-    - Ensure foreign key constraints, column names, and decimal precisions match across modules.
-    - Run joint integration smoke test: register supplier -> receive batch -> create customer -> verify records.
+    - [x] Coordinate relational schema across Member 3 (Suppliers & Batches), Member 4 (Sales & Sale Items), and Member 5 (Customers & Credit Payments).
+    - [x] Standardize currency types (`NUMERIC(10, 2)`), timestamps (`TIMESTAMP WITH TIME ZONE`), and foreign key cascade rules (`ON DELETE RESTRICT` across relational entities to preserve audit integrity).
+    - [x] Build composite index on `(medicine_id, expiry_date, current_quantity)` for zero-latency FEFO batch allocation.
+    - [x] Create centralized `alerts` table supporting M3/M4 background alert engines (`expiry_warning`, `expired`, `low_stock`, `credit_overdue`, `birthday`).
+    - [x] Execute end-to-end multi-entity database flow in [`tests/integration/run_schema_harmonization_test.js`](../../medixmart-backend/tests/integration/run_schema_harmonization_test.js): supplier registration -> batch receipt -> customer creation -> atomic POS credit sale with FEFO batch deduction -> customer debt repayment -> alert creation & resolution -> constraint violation checks.
   - **Dependencies:** M3, M4, M5 backend PRs.
-  - **Verification:** End-to-end multi-entity database flow executes with zero foreign key or type mismatches.
+  - **Verification:** Verified via [`tests/integration/run_schema_harmonization_test.js`](../../medixmart-backend/tests/integration/run_schema_harmonization_test.js): 9/9 assertions pass with complete relational integrity and zero type mismatches.
 
 ---
 

@@ -120,9 +120,12 @@ All backend responses strictly adhere to uniform JSON envelopes.
   "data": [
     {
       "id": 10,
-      "brand_name": "Panadol",
+      "name": "Panadol ActiFast",
       "generic_name": "Paracetamol",
+      "brand": "GSK",
+      "dosage_form": "Tablet",
       "strength": "500mg",
+      "selling_price": "25.00",
       "category_id": 1,
       "category_name": "Analgesics",
       "is_active": true
@@ -550,7 +553,7 @@ class ApiClient {
   - `category_id` (optional): Filter by numeric category ID.
   - `page` (optional, default `1`): Page number.
   - `limit` (optional, default `20`, max `100`): Items per page.
-  - `sort_by` (optional, default `brand_name`): Whitelisted: `id`, `brand_name`, `generic_name`, `strength`, `created_at`.
+  - `sort_by` (optional, default `name`): Whitelisted: `id`, `name`, `selling_price`, `reorder_level`, `created_at`.
   - `order` (optional, default `asc`): `asc` or `desc`.
 - **Response (`200 OK`):**
   ```json
@@ -559,12 +562,16 @@ class ApiClient {
     "data": [
       {
         "id": 5,
-        "brand_name": "Panadol ActiFast",
+        "name": "Panadol ActiFast",
         "generic_name": "Paracetamol",
+        "brand": "GSK",
+        "dosage_form": "Tablet",
         "strength": "500mg",
+        "selling_price": "25.00",
+        "cost_price": "18.50",
+        "reorder_level": 20,
         "category_id": 1,
         "category_name": "Analgesics",
-        "description": "Rapid release paracetamol tablets",
         "is_active": true,
         "created_at": "2026-11-19T06:00:00.000Z"
       }
@@ -587,27 +594,35 @@ class ApiClient {
 - **Request Body:**
   ```json
   {
-    "brand_name": "Amoxil",
+    "name": "Amoxil",
     "generic_name": "Amoxicillin",
+    "brand": "GSK",
+    "dosage_form": "Capsule",
     "strength": "250mg",
     "category_id": 1,
-    "description": "Broad-spectrum oral antibiotic"
+    "selling_price": 45.00,
+    "cost_price": 32.00,
+    "reorder_level": 25
   }
   ```
 - **Error Codes:**
-  - `400 VALIDATION_ERROR`: Missing required fields or category does not exist.
-  - `409 DUPLICATE_ENTRY`: Medicine with identical `brand_name` and `strength` already exists.
+  - `400 VALIDATION_ERROR`: Missing required fields (`name`, `category_id`, `selling_price`) or non-existent category.
+  - `409 DUPLICATE_ENTRY`: Medicine with identical `name` and `strength` already exists.
 
 #### 3. Update Medicine Details
 - **Method & Route:** `PUT /api/medicines/:id` (Protected: Admin Only)
 - **Request Body:**
   ```json
   {
-    "brand_name": "Amoxil Forte",
+    "name": "Amoxil Forte",
     "generic_name": "Amoxicillin",
+    "brand": "GSK",
+    "dosage_form": "Capsule",
     "strength": "500mg",
     "category_id": 1,
-    "description": "Updated strength"
+    "selling_price": 75.00,
+    "cost_price": 55.00,
+    "reorder_level": 30
   }
   ```
 
