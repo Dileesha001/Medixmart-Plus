@@ -55,6 +55,11 @@ const config = {
   business: {
     timezone: process.env.TIMEZONE || 'Asia/Colombo',
     expiryWindowMonths: parseInt(process.env.EXPIRY_WINDOW_MONTHS, 10) || 7
+  },
+  
+  jobs: {
+    expiryCron: process.env.EXPIRY_JOB_CRON || '0 6 * * *',
+    runExpiryOnStartup: process.env.EXPIRY_JOB_RUN_ON_STARTUP !== 'false'
   }
 };
 
