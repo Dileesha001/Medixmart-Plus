@@ -44,29 +44,36 @@ class SidebarNavItem extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: SvgPicture.asset(
-                      iconAsset,
+              Expanded(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
                       width: 18,
                       height: 18,
+                      child: SvgPicture.asset(
+                        iconAsset,
+                        width: 18,
+                        height: 18,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: MmSpacing.md),
-                  Text(
-                    label,
-                    style: MmTypography.labelLarge.copyWith(
-                      color:
-                          isActive ? MmColors.textBrand : MmColors.textPrimary,
+                    const SizedBox(width: MmSpacing.md),
+                    Expanded(
+                      child: Text(
+                        label,
+                        style: MmTypography.labelLarge.copyWith(
+                          color: isActive
+                              ? MmColors.textBrand
+                              : MmColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-              if (badgeCount != null && badgeCount! > 0)
+              if (badgeCount != null && badgeCount! > 0) ...[
+                const SizedBox(width: MmSpacing.xs),
                 Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: MmSpacing.xs,
@@ -83,6 +90,7 @@ class SidebarNavItem extends StatelessWidget {
                     ),
                   ),
                 ),
+              ],
             ],
           ),
         ),

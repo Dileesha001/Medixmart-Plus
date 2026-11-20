@@ -6,7 +6,7 @@ import '../config/app_theme.dart';
 /// POS and Inventory search bar (`7:87` / `7:71`).
 class PosSearchBar extends StatelessWidget {
   final String placeholder;
-  final double width;
+  final double? width;
   final TextEditingController? controller;
   final ValueChanged<String>? onChanged;
 

@@ -105,6 +105,7 @@ class KpiSummaryCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(width: MmSpacing.sm),
                   Container(
                     width: 36,
                     height: 36,
@@ -126,9 +127,13 @@ class KpiSummaryCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: MmSpacing.md),
-              Text(
-                value,
-                style: MmTypography.headingH1,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
+                  style: MmTypography.headingH1,
+                ),
               ),
               const SizedBox(height: MmSpacing.md),
               Text(
@@ -136,6 +141,7 @@ class KpiSummaryCard extends StatelessWidget {
                 style: MmTypography.bodySmall.copyWith(
                   color: _subtitleColor,
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_assets.dart';
@@ -14,6 +15,17 @@ import '../../widgets/mm_button.dart';
 import '../../widgets/pos_search_bar.dart';
 import '../../widgets/sidebar_nav_item.dart';
 
+/// Responsive width breakpoints for the Medixmart Plus Admin Dashboard.
+abstract final class _DashboardBreakpoints {
+  static const double desktopSidebar = 1024.0;
+  static const double kpiFourCol = 1000.0;
+  static const double kpiTwoCol = 560.0;
+  static const double analyticsSplit = 960.0;
+  static const double headerSingleRow = 760.0;
+  static const double compactPadding = 760.0;
+  static const double tableMinWidth = 960.0;
+}
+
 /// Medixmart Plus Admin Dashboard screen (`46:355`).
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -23,6 +35,7 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late final TextEditingController _searchController;
 
   @override
@@ -55,52 +68,83 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
   }
 
+  void _handleNavTap(SidebarNavItemData item, {required bool closeDrawer}) {
+    context.read<DashboardProvider>().selectNavItem(item.id);
+    if (closeDrawer) {
+      Navigator.of(context).maybePop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MmColors.bgCanvas,
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _DashboardSidebar(
-            onNavTap: (item) {
-              context.read<DashboardProvider>().selectNavItem(item.id);
-            },
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final showPermanentSidebar =
+            constraints.maxWidth >= _DashboardBreakpoints.desktopSidebar;
+
+        final mainArea = _DashboardMainArea(
+          searchController: _searchController,
+          showMenuButton: !showPermanentSidebar,
+          onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+          onNewSale: () => _showWorkflowFeedback(
+            context,
+            'Opening POS Checkout for New Sale...',
           ),
-          Expanded(
-            child: _DashboardMainArea(
-              searchController: _searchController,
-              onNewSale: () => _showWorkflowFeedback(
-                context,
-                'Opening POS Checkout for New Sale...',
-              ),
-              onViewAllAlerts: () {
-                context.read<DashboardProvider>().selectNavItem('alerts');
-                _showWorkflowFeedback(
-                  context,
-                  'Viewing all 20 active stock & expiry alerts.',
-                );
-              },
-              onReceiveBatch: () {
-                context
-                    .read<DashboardProvider>()
-                    .selectNavItem('receive_batches');
-                _showWorkflowFeedback(
-                  context,
-                  'Opening Receive Batch workflow...',
-                );
-              },
-              onAddMedicine: () {
-                context.read<DashboardProvider>().selectNavItem('medicines');
-                _showWorkflowFeedback(
-                  context,
-                  'Opening Add Medicine catalog form...',
-                );
-              },
-            ),
+          onViewAllAlerts: () {
+            context.read<DashboardProvider>().selectNavItem('alerts');
+            _showWorkflowFeedback(
+              context,
+              'Viewing all 20 active stock & expiry alerts.',
+            );
+          },
+          onReceiveBatch: () {
+            context.read<DashboardProvider>().selectNavItem('receive_batches');
+            _showWorkflowFeedback(
+              context,
+              'Opening Receive Batch workflow...',
+            );
+          },
+          onAddMedicine: () {
+            context.read<DashboardProvider>().selectNavItem('medicines');
+            _showWorkflowFeedback(
+              context,
+              'Opening Add Medicine catalog form...',
+            );
+          },
+        );
+
+        return Scaffold(
+          key: _scaffoldKey,
+          backgroundColor: MmColors.bgCanvas,
+          drawer: showPermanentSidebar
+              ? null
+              : Drawer(
+                  width: 260,
+                  backgroundColor: MmColors.bgSurface,
+                  shape: const RoundedRectangleBorder(),
+                  child: SafeArea(
+                    child: _DashboardSidebar(
+                      onNavTap: (item) =>
+                          _handleNavTap(item, closeDrawer: true),
+                    ),
+                  ),
+                ),
+          body: SafeArea(
+            child: showPermanentSidebar
+                ? Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _DashboardSidebar(
+                        onNavTap: (item) =>
+                            _handleNavTap(item, closeDrawer: false),
+                      ),
+                      Expanded(child: mainArea),
+                    ],
+                  )
+                : mainArea,
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -122,6 +166,8 @@ class _DashboardSidebar extends StatelessWidget {
         authUser?.initials ?? AdminDashboardDefaults.adminInitials;
     final userName = authUser?.displayName ?? AdminDashboardDefaults.adminName;
     final userRole = authUser?.roleLabel ?? AdminDashboardDefaults.adminRole;
+    final workspaceBadge =
+        authUser?.isPharmacist == true ? 'PHARMACIST' : 'ADMIN';
 
     return Container(
       width: 260,
@@ -139,49 +185,50 @@ class _DashboardSidebar extends StatelessWidget {
         ),
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Brand & Navigation (`46:357`)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Brand (`46:358`)
-              Padding(
-                padding: const EdgeInsets.only(
-                  top: MmSpacing.xs,
-                  bottom: MmSpacing.sm,
-                  left: MmSpacing.xs,
-                  right: MmSpacing.xs,
-                ),
-                child: Row(
-                  children: [
-                    const BrandEmblem(size: 36),
-                    const SizedBox(width: MmSpacing.md),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Medixmart Plus',
-                          style: MmTypography.headingH4,
+          // Brand (`46:358`)
+          Padding(
+            padding: const EdgeInsets.only(
+              top: MmSpacing.xs,
+              bottom: MmSpacing.sm,
+              left: MmSpacing.xs,
+              right: MmSpacing.xs,
+            ),
+            child: Row(
+              children: [
+                const BrandEmblem(size: 36),
+                const SizedBox(width: MmSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Medixmart Plus',
+                        style: MmTypography.headingH4,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: MmSpacing.xxs),
+                      Text(
+                        workspaceBadge,
+                        style: MmTypography.labelSmall.copyWith(
+                          color: MmColors.textBrand,
                         ),
-                        const SizedBox(height: MmSpacing.xxs),
-                        Text(
-                          'ADMIN',
-                          style: MmTypography.labelSmall.copyWith(
-                            color: MmColors.textBrand,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: MmSpacing.xl),
-              // Navigation List (`46:363`)
-              Column(
+              ],
+            ),
+          ),
+          const SizedBox(height: MmSpacing.xl),
+
+          // Scrollable Navigation List (`46:363`)
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   for (var i = 0;
@@ -199,8 +246,9 @@ class _DashboardSidebar extends StatelessWidget {
                   ],
                 ],
               ),
-            ],
+            ),
           ),
+          const SizedBox(height: MmSpacing.md),
 
           // Admin User (`46:424`)
           Container(
@@ -242,7 +290,7 @@ class _DashboardSidebar extends StatelessWidget {
                 ),
                 const SizedBox(width: MmSpacing.sm),
                 // User Details (`46:427`)
-                Flexible(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
@@ -265,6 +313,24 @@ class _DashboardSidebar extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: MmSpacing.xs),
+                IconButton(
+                  key: const Key('sidebar_logout_button'),
+                  tooltip: 'Sign out',
+                  onPressed: () {
+                    context.read<AuthProvider?>()?.logout();
+                  },
+                  icon: const Icon(
+                    Icons.logout_rounded,
+                    size: 18,
+                    color: MmColors.textSecondary,
+                  ),
+                  style: IconButton.styleFrom(
+                    minimumSize: const Size(32, 32),
+                    padding: EdgeInsets.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
               ],
             ),
           ),
@@ -277,6 +343,8 @@ class _DashboardSidebar extends StatelessWidget {
 /// Main content area (`46:430`): Top Header and scrollable Dashboard Body.
 class _DashboardMainArea extends StatelessWidget {
   final TextEditingController searchController;
+  final bool showMenuButton;
+  final VoidCallback onOpenDrawer;
   final VoidCallback onNewSale;
   final VoidCallback onViewAllAlerts;
   final VoidCallback onReceiveBatch;
@@ -284,6 +352,8 @@ class _DashboardMainArea extends StatelessWidget {
 
   const _DashboardMainArea({
     required this.searchController,
+    required this.showMenuButton,
+    required this.onOpenDrawer,
     required this.onNewSale,
     required this.onViewAllAlerts,
     required this.onReceiveBatch,
@@ -294,135 +364,329 @@ class _DashboardMainArea extends StatelessWidget {
   Widget build(BuildContext context) {
     final dashboardProvider = context.watch<DashboardProvider>();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Top Header (`46:431`)
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: MmSpacing.xxxl,
-            vertical: MmSpacing.lg,
-          ),
-          decoration: const BoxDecoration(
-            color: MmColors.bgSurface,
-            border: Border(
-              bottom: BorderSide(
-                color: MmColors.borderDefault,
-                width: MmElevation.strokeThin,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final areaWidth = constraints.maxWidth;
+        final isCompact = areaWidth < _DashboardBreakpoints.compactPadding;
+        final horizontalPadding = isCompact ? MmSpacing.lg : MmSpacing.xxxl;
+        final bodyContentWidth =
+            math.max(0.0, areaWidth - (horizontalPadding * 2));
+        final singleRowHeader =
+            areaWidth >= _DashboardBreakpoints.headerSingleRow;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Top Header (`46:431`)
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(
+                horizontal: horizontalPadding,
+                vertical: MmSpacing.lg,
+              ),
+              decoration: const BoxDecoration(
+                color: MmColors.bgSurface,
+                border: Border(
+                  bottom: BorderSide(
+                    color: MmColors.borderDefault,
+                    width: MmElevation.strokeThin,
+                  ),
+                ),
+              ),
+              child: singleRowHeader
+                  ? _buildSingleRowHeader(dashboardProvider)
+                  : _buildStackedHeader(dashboardProvider, areaWidth),
+            ),
+
+            // Dashboard Body (`46:447`)
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
+                  vertical: isCompact ? MmSpacing.lg : MmSpacing.xxl,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // KPI Grid (`46:448`)
+                    _KpiSummaryGrid(
+                      cards: dashboardProvider.kpiCards,
+                      availableWidth: bodyContentWidth,
+                    ),
+                    const SizedBox(height: MmSpacing.xl),
+
+                    // Analytics & Alerts Section (`46:486`)
+                    if (bodyContentWidth >=
+                        _DashboardBreakpoints.analyticsSplit)
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: _Last7DaysSalesCard(
+                              totalLabel: AdminDashboardDefaults.last7DaysTotal,
+                              bars: dashboardProvider.dailySalesBars,
+                              minHeight: 332,
+                            ),
+                          ),
+                          const SizedBox(width: MmSpacing.lg),
+                          SizedBox(
+                            width: 400,
+                            child: _RecentAlertsCard(
+                              actionLabel: AdminDashboardDefaults
+                                  .recentAlertsActionLabel,
+                              alerts: dashboardProvider.recentAlerts,
+                              onViewAll: onViewAllAlerts,
+                            ),
+                          ),
+                        ],
+                      )
+                    else ...[
+                      _Last7DaysSalesCard(
+                        totalLabel: AdminDashboardDefaults.last7DaysTotal,
+                        bars: dashboardProvider.dailySalesBars,
+                      ),
+                      const SizedBox(height: MmSpacing.xl),
+                      _RecentAlertsCard(
+                        actionLabel:
+                            AdminDashboardDefaults.recentAlertsActionLabel,
+                        alerts: dashboardProvider.recentAlerts,
+                        onViewAll: onViewAllAlerts,
+                      ),
+                    ],
+                    const SizedBox(height: MmSpacing.xl),
+
+                    // Inventory Watchlist Card (`46:580`)
+                    _InventoryWatchlistCard(
+                      items: dashboardProvider.filteredWatchlistItems,
+                      onReceiveBatch: onReceiveBatch,
+                      onAddMedicine: onAddMedicine,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildMenuIconButton() {
+    return Padding(
+      padding: const EdgeInsets.only(right: MmSpacing.sm),
+      child: IconButton(
+        key: const Key('dashboard_menu_button'),
+        tooltip: 'Open navigation menu',
+        onPressed: onOpenDrawer,
+        icon: const Icon(
+          Icons.menu_rounded,
+          size: 22,
+          color: MmColors.iconPrimary,
+        ),
+        style: IconButton.styleFrom(
+          minimumSize: const Size(36, 36),
+          padding: EdgeInsets.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSingleRowHeader(DashboardProvider dashboardProvider) {
+    return Row(
+      children: [
+        if (showMenuButton) _buildMenuIconButton(),
+        // Title Group (`46:432`)
+        Expanded(
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Title Group (`46:432`)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    AdminDashboardDefaults.headerTitle,
-                    style: MmTypography.headingH2,
-                  ),
-                  const SizedBox(width: MmSpacing.md),
-                  Text(
-                    AdminDashboardDefaults.headerDate,
-                    style: MmTypography.bodySmall.copyWith(
-                      color: MmColors.textMuted,
-                    ),
-                  ),
-                ],
+              Flexible(
+                child: Text(
+                  AdminDashboardDefaults.headerTitle,
+                  style: MmTypography.headingH2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              // Header Controls (`46:435`)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  PosSearchBar(
-                    width: 320,
-                    placeholder: AdminDashboardDefaults.searchPlaceholder,
-                    controller: searchController,
-                    onChanged: dashboardProvider.updateSearchQuery,
+              const SizedBox(width: MmSpacing.md),
+              Flexible(
+                child: Text(
+                  AdminDashboardDefaults.headerDate,
+                  style: MmTypography.bodySmall.copyWith(
+                    color: MmColors.textMuted,
                   ),
-                  const SizedBox(width: MmSpacing.md),
-                  MmButton(
-                    label: 'New Sale',
-                    leadingIconAsset: AppAssets.iconPlusMd,
-                    variant: MmButtonVariant.primary,
-                    size: MmButtonSize.medium,
-                    onPressed: onNewSale,
-                  ),
-                ],
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
         ),
-
-        // Dashboard Body (`46:447`)
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(
-              horizontal: MmSpacing.xxxl,
-              vertical: MmSpacing.xxl,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // KPI Row (`46:448`)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (var i = 0;
-                        i < dashboardProvider.kpiCards.length;
-                        i++) ...[
-                      if (i > 0) const SizedBox(width: MmSpacing.lg),
-                      Expanded(
-                        child: KpiSummaryCard.fromData(
-                          dashboardProvider.kpiCards[i],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: MmSpacing.xl),
-
-                // Analytics & Alerts Row (`46:486`)
-                IntrinsicHeight(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Last 7 Days Sales Card (`46:487`)
-                      Expanded(
-                        child: _Last7DaysSalesCard(
-                          totalLabel: AdminDashboardDefaults.last7DaysTotal,
-                          bars: dashboardProvider.dailySalesBars,
-                        ),
-                      ),
-                      const SizedBox(width: MmSpacing.lg),
-                      // Recent Alerts Card (`46:527`)
-                      SizedBox(
-                        width: 400,
-                        child: _RecentAlertsCard(
-                          actionLabel:
-                              AdminDashboardDefaults.recentAlertsActionLabel,
-                          alerts: dashboardProvider.recentAlerts,
-                          onViewAll: onViewAllAlerts,
-                        ),
-                      ),
-                    ],
+        const SizedBox(width: MmSpacing.lg),
+        // Header Controls (`46:435`)
+        Flexible(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Flexible(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  child: PosSearchBar(
+                    width: null,
+                    placeholder: AdminDashboardDefaults.searchPlaceholder,
+                    controller: searchController,
+                    onChanged: dashboardProvider.updateSearchQuery,
                   ),
                 ),
-                const SizedBox(height: MmSpacing.xl),
-
-                // Inventory Watchlist Card (`46:580`)
-                _InventoryWatchlistCard(
-                  items: dashboardProvider.filteredWatchlistItems,
-                  onReceiveBatch: onReceiveBatch,
-                  onAddMedicine: onAddMedicine,
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(width: MmSpacing.md),
+              MmButton(
+                label: 'New Sale',
+                leadingIconAsset: AppAssets.iconPlusMd,
+                variant: MmButtonVariant.primary,
+                size: MmButtonSize.medium,
+                onPressed: onNewSale,
+              ),
+            ],
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildStackedHeader(
+    DashboardProvider dashboardProvider,
+    double areaWidth,
+  ) {
+    final showDateInline = areaWidth >= 480;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            if (showMenuButton) _buildMenuIconButton(),
+            Expanded(
+              child: showDateInline
+                  ? Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            AdminDashboardDefaults.headerTitle,
+                            style: MmTypography.headingH2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: MmSpacing.md),
+                        Flexible(
+                          child: Text(
+                            AdminDashboardDefaults.headerDate,
+                            style: MmTypography.bodySmall.copyWith(
+                              color: MmColors.textMuted,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          AdminDashboardDefaults.headerTitle,
+                          style: MmTypography.headingH3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          AdminDashboardDefaults.headerDate,
+                          style: MmTypography.bodySmall.copyWith(
+                            color: MmColors.textMuted,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+            ),
+            const SizedBox(width: MmSpacing.md),
+            MmButton(
+              label: 'New Sale',
+              leadingIconAsset: AppAssets.iconPlusMd,
+              variant: MmButtonVariant.primary,
+              size: MmButtonSize.medium,
+              onPressed: onNewSale,
+            ),
+          ],
+        ),
+        const SizedBox(height: MmSpacing.md),
+        PosSearchBar(
+          width: null,
+          placeholder: AdminDashboardDefaults.searchPlaceholder,
+          controller: searchController,
+          onChanged: dashboardProvider.updateSearchQuery,
+        ),
+      ],
+    );
+  }
+}
+
+/// Adaptive KPI grid: 4 columns on desktop, 2x2 on tablet, 1 column on mobile.
+class _KpiSummaryGrid extends StatelessWidget {
+  final List<KpiCardData> cards;
+  final double availableWidth;
+
+  const _KpiSummaryGrid({
+    required this.cards,
+    required this.availableWidth,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (availableWidth >= _DashboardBreakpoints.kpiFourCol) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < cards.length; i++) ...[
+            if (i > 0) const SizedBox(width: MmSpacing.lg),
+            Expanded(child: KpiSummaryCard.fromData(cards[i])),
+          ],
+        ],
+      );
+    }
+
+    if (availableWidth >= _DashboardBreakpoints.kpiTwoCol) {
+      final rows = <Widget>[];
+      for (var i = 0; i < cards.length; i += 2) {
+        if (i > 0) rows.add(const SizedBox(height: MmSpacing.lg));
+        rows.add(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: KpiSummaryCard.fromData(cards[i])),
+              const SizedBox(width: MmSpacing.lg),
+              Expanded(
+                child: i + 1 < cards.length
+                    ? KpiSummaryCard.fromData(cards[i + 1])
+                    : const SizedBox.shrink(),
+              ),
+            ],
+          ),
+        );
+      }
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: rows,
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < cards.length; i++) ...[
+          if (i > 0) const SizedBox(height: MmSpacing.md),
+          KpiSummaryCard.fromData(cards[i]),
+        ],
       ],
     );
   }
@@ -432,15 +696,19 @@ class _DashboardMainArea extends StatelessWidget {
 class _Last7DaysSalesCard extends StatelessWidget {
   final String totalLabel;
   final List<DailySalesBarData> bars;
+  final double? minHeight;
 
   const _Last7DaysSalesCard({
     required this.totalLabel,
     required this.bars,
+    this.minHeight,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      constraints:
+          minHeight != null ? BoxConstraints(minHeight: minHeight!) : null,
       padding: const EdgeInsets.all(MmSpacing.xl),
       decoration: BoxDecoration(
         color: MmColors.bgSurface,
@@ -454,10 +722,14 @@ class _Last7DaysSalesCard extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Header (`46:488`)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: MmSpacing.md,
+            runSpacing: MmSpacing.xs,
             children: [
               Text(
                 'Last 7 Days Sales',
@@ -476,14 +748,20 @@ class _Last7DaysSalesCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(
               top: MmSpacing.xs,
-              left: MmSpacing.sm,
-              right: MmSpacing.sm,
+              left: MmSpacing.xs,
+              right: MmSpacing.xs,
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                for (final bar in bars) DailySalesBar.fromData(bar),
+                for (var i = 0; i < bars.length; i++) ...[
+                  if (i > 0) const SizedBox(width: MmSpacing.xs),
+                  Expanded(
+                    child: Center(
+                      child: DailySalesBar.fromData(bars[i]),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -526,10 +804,14 @@ class _RecentAlertsCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Recent Alerts',
-                style: MmTypography.headingH3,
+              Expanded(
+                child: Text(
+                  'Recent Alerts',
+                  style: MmTypography.headingH3,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: MmSpacing.sm),
               InkWell(
                 onTap: onViewAll,
                 borderRadius: BorderRadius.circular(MmRadius.sm),
@@ -596,16 +878,20 @@ class _InventoryWatchlistCard extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Table Header (`46:581`)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: MmSpacing.md,
+            runSpacing: MmSpacing.sm,
             children: [
               Text(
                 'Inventory Watchlist',
                 style: MmTypography.headingH3,
               ),
               // Table Actions (`46:583`)
-              Row(
-                mainAxisSize: MainAxisSize.min,
+              Wrap(
+                spacing: MmSpacing.sm,
+                runSpacing: MmSpacing.sm,
                 children: [
                   MmButton(
                     label: 'Receive Batch',
@@ -614,7 +900,6 @@ class _InventoryWatchlistCard extends StatelessWidget {
                     size: MmButtonSize.small,
                     onPressed: onReceiveBatch,
                   ),
-                  const SizedBox(width: MmSpacing.sm),
                   MmButton(
                     label: 'Add Medicine',
                     leadingIconAsset: AppAssets.iconPlusSm,
@@ -627,7 +912,7 @@ class _InventoryWatchlistCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: MmSpacing.md),
-          // Table Rows (`46:595`)
+          // Table Rows (`46:595`) with smooth horizontal scroll on narrow screens
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(MmRadius.md),
@@ -637,12 +922,27 @@ class _InventoryWatchlistCard extends StatelessWidget {
               ),
             ),
             clipBehavior: Clip.antiAlias,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const DataTableHeaderRow(),
-                for (final item in items) InventoryWatchlistRow(item: item),
-              ],
+            child: LayoutBuilder(
+              builder: (context, tableConstraints) {
+                final tableWidth = math.max(
+                  tableConstraints.maxWidth,
+                  _DashboardBreakpoints.tableMinWidth,
+                );
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: tableWidth,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const DataTableHeaderRow(),
+                        for (final item in items)
+                          InventoryWatchlistRow(item: item),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ],

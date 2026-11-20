@@ -98,9 +98,13 @@ class StatusBadge extends StatelessWidget {
             ),
             const SizedBox(width: MmSpacing.xs),
           ],
-          Text(
-            effectiveLabel,
-            style: MmTypography.labelSmall.copyWith(color: _textColor),
+          Flexible(
+            child: Text(
+              effectiveLabel,
+              style: MmTypography.labelSmall.copyWith(color: _textColor),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
           ),
         ],
       ),
