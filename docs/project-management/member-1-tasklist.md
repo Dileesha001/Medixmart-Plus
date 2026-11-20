@@ -224,15 +224,17 @@ flowchart TD
 ### Week 5: Expiry Alerts & POS Transaction Review
 *Target Milestone: Automated 7-month expiry alert calculation, background scheduler, and concurrency-safe POS locking.*
 
-- [ ] **M1-W5-01: Implement Expiry-Alert SQL Engine**
-  - **Deliverable:** Stored procedure or transactional service function `generate_expiry_alerts()`.
+- [x] **M1-W5-01: Implement Expiry-Alert SQL Engine**
+  - **Deliverable:** Stored procedure in [`src/sql/05_create_expiry_alert_function.sql`](../../medixmart-backend/src/sql/05_create_expiry_alert_function.sql), [`src/sql/functions/generate_expiry_alerts.sql`](../../medixmart-backend/src/sql/functions/generate_expiry_alerts.sql), service layer in [`src/services/alert.service.js`](../../medixmart-backend/src/services/alert.service.js), and REST API endpoints in [`src/routes/alert.routes.js`](../../medixmart-backend/src/routes/alert.routes.js).
   - **Action Items:**
-    - Write SQL logic in `src/sql/functions/generate_expiry_alerts.sql`.
-    - Query active batches where `quantity > 0` and `expiry_date <= CURRENT_DATE + INTERVAL '7 months'`.
-    - Distinguish between **Expired** (`expiry_date < CURRENT_DATE`) and **Expiring Soon / Return Window** (`CURRENT_DATE <= expiry_date <= CURRENT_DATE + 7 months`).
-    - Ensure idempotency: do not create duplicate active alerts for the same batch ID and alert type.
+    - [x] Write SQL stored procedure `generate_expiry_alerts(p_months_ahead INT DEFAULT 7)`.
+    - [x] Categorize qualifying batches into **Expired** (`expiry_date < CURRENT_DATE`, severity `danger`) and **Expiring Soon / Return Window** (`CURRENT_DATE <= expiry_date <= CURRENT_DATE + 7 months`, severity `warning`).
+    - [x] Enforce strict idempotency: prevent duplicate active alerts for the same batch ID and alert type.
+    - [x] Implement automatic resolution for alerts when batch stock is depleted (`current_quantity = 0`) or marked inactive (`is_active = FALSE`).
+    - [x] Implement graduation: auto-resolve old `expiry_warning` alerts and create new `expired` alerts when time passes.
+    - [x] Provide REST API endpoints (`GET /api/alerts`, `GET /api/alerts/summary`, `PATCH /api/alerts/:id/resolve`, and Admin `POST /api/alerts/generate-expiry`).
   - **Dependencies:** M3 batch schema.
-  - **Verification:** Executing function multiple times on test data creates exactly one alert per qualifying batch.
+  - **Verification:** Verified via [`tests/integration/run_expiry_engine_test.js`](../../medixmart-backend/tests/integration/run_expiry_engine_test.js): Stored procedure execution, idempotency, auto-resolution, alert graduation, and REST RBAC pass 7/7 assertions. All 9 test suites pass without regression.
 
 - [ ] **M1-W5-02: Schedule Expiry Checks**
   - **Deliverable:** Automated cron job with startup catch-up in `src/jobs/expiryJob.js`.
