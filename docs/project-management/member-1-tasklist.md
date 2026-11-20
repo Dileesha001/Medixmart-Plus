@@ -236,15 +236,16 @@ flowchart TD
   - **Dependencies:** M3 batch schema.
   - **Verification:** Verified via [`tests/integration/run_expiry_engine_test.js`](../../medixmart-backend/tests/integration/run_expiry_engine_test.js): Stored procedure execution, idempotency, auto-resolution, alert graduation, and REST RBAC pass 7/7 assertions. All 9 test suites pass without regression.
 
-- [ ] **M1-W5-02: Schedule Expiry Checks**
-  - **Deliverable:** Automated cron job with startup catch-up in `src/jobs/expiryJob.js`.
+- [x] **M1-W5-02: Schedule Expiry Checks**
+  - **Deliverable:** Automated cron job with startup catch-up in [`src/jobs/expiryJob.js`](../../medixmart-backend/src/jobs/expiryJob.js) integrated into [`src/server.js`](../../medixmart-backend/src/server.js).
   - **Action Items:**
-    - Schedule daily execution at 06:00 using `node-cron` with configurable timezone (e.g., `Asia/Colombo`).
-    - Run an automatic catch-up check during server startup to handle downtime during scheduled hours.
-    - Implement execution lock to prevent overlapping runs.
-    - Log job runs (start, records checked, alerts created, execution time, errors) without exposing sensitive data.
+    - [x] Schedule daily execution at 06:00 using `node-cron` with configurable timezone (e.g., `Asia/Colombo` from `config.business.timezone`).
+    - [x] Implement automatic catch-up check during server startup (`runOnStartup`) to handle downtime during scheduled 06:00 window.
+    - [x] Implement atomic in-memory concurrency execution lock preventing overlapping background runs.
+    - [x] Structured audit logging: records checked, alerts created, execution time, errors without leaking sensitive connection details.
+    - [x] Lifecycle methods: `start()`, `stop()`, `triggerNow()`, and `getStatus()`.
   - **Dependencies:** M1-W5-01.
-  - **Verification:** Startup trigger fires immediately; manual clock test confirms 06:00 trigger; logs recorded cleanly.
+  - **Verification:** Verified via [`tests/integration/run_expiry_job_test.js`](../../medixmart-backend/tests/integration/run_expiry_job_test.js): Startup catch-up trigger, manual trigger, concurrency locking, and clean shutdown pass 5/5 assertions. All 10 backend test suites pass.
 
 - [ ] **M1-W5-03: Review Sale Locking and Rollback**
   - **Deliverable:** Concurrency review and transaction validation for Member 4's sales engine.

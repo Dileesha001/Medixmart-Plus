@@ -7,6 +7,7 @@ const os = require('os');
 const config = require('./config/environment');
 const db = require('./config/db');
 const app = require('./app');
+const expiryJob = require('./jobs/expiryJob');
 
 const server = http.createServer(app);
 
@@ -42,6 +43,9 @@ const startServer = async () => {
       console.log(` Health check:     http://127.0.0.1:${config.port}/api/health`);
       console.log(` Timezone:         ${config.business.timezone}`);
       console.log(`=======================================================`);
+
+      // Initialize background jobs (scheduled daily 06:00 check + startup catch-up)
+      expiryJob.start();
     });
   } catch (err) {
     console.error('[FATAL] Error starting server:', err);
@@ -52,6 +56,7 @@ const startServer = async () => {
 // Graceful shutdown logic
 const gracefulShutdown = async (signal) => {
   console.log(`\n[SHUTDOWN] Received ${signal}. Closing HTTP server...`);
+  expiryJob.stop();
   server.close(async () => {
     console.log('[SHUTDOWN] HTTP server closed.');
     try {
