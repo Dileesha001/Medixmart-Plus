@@ -1,23 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:medixmart_app/main.dart';
+import 'package:medixmart_app/config/app_theme.dart';
+import 'package:medixmart_app/providers/auth_provider.dart';
+import 'package:medixmart_app/providers/dashboard_provider.dart';
+import 'package:medixmart_app/screens/dashboard/admin_dashboard_screen.dart';
+import 'package:provider/provider.dart';
+
+Widget _buildDashboardTestApp() {
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider(create: (_) => AuthProvider()),
+      ChangeNotifierProvider(create: (_) => DashboardProvider()),
+    ],
+    child: MaterialApp(
+      theme: AppTheme.lightTheme,
+      home: const AdminDashboardScreen(),
+    ),
+  );
+}
 
 void main() {
-  testWidgets('AdminDashboardScreen renders Figma 46:355 sections and data',
+  testWidgets(
+      'AdminDashboardScreen renders Figma 46:355 desktop layout at 1440x900',
       (WidgetTester tester) async {
     tester.view.physicalSize = const Size(1440, 900);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(const MedixmartApp());
+    await tester.pumpWidget(_buildDashboardTestApp());
     await tester.pumpAndSettle();
 
-    // Brand & User details
+    // Permanent sidebar visible, no hamburger menu button
+    expect(find.byKey(const Key('dashboard_menu_button')), findsNothing);
     expect(find.text('Medixmart Plus'), findsOneWidget);
     expect(find.text('ADMIN'), findsOneWidget);
     expect(find.text('Ravindu Bandara'), findsOneWidget);
     expect(find.text('Administrator'), findsOneWidget);
+    expect(find.byKey(const Key('sidebar_logout_button')), findsOneWidget);
 
     // KPI Cards
     expect(find.text("Today's Sales"), findsOneWidget);
@@ -37,5 +57,52 @@ void main() {
     expect(find.text('Amoxicillin 250mg Cap'), findsNWidgets(2));
     expect(find.text('Paracetamol BP 500mg'), findsOneWidget);
     expect(find.text('Metformin HCl 500mg'), findsOneWidget);
+  });
+
+  testWidgets(
+      'AdminDashboardScreen adapts cleanly at tablet 862x692 with drawer navigation',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(862, 692);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(_buildDashboardTestApp());
+    await tester.pumpAndSettle();
+
+    // Compact shell uses drawer menu button
+    expect(find.byKey(const Key('dashboard_menu_button')), findsOneWidget);
+    expect(find.text("Today's Sales"), findsOneWidget);
+    expect(find.text('Last 7 Days Sales'), findsOneWidget);
+    expect(find.text('Recent Alerts'), findsOneWidget);
+    expect(find.text('Inventory Watchlist'), findsOneWidget);
+
+    // Opening drawer reveals sidebar navigation and logout action
+    await tester.tap(find.byKey(const Key('dashboard_menu_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Medixmart Plus'), findsOneWidget);
+    expect(find.text('Ravindu Bandara'), findsOneWidget);
+    expect(find.byKey(const Key('sidebar_logout_button')), findsOneWidget);
+  });
+
+  testWidgets(
+      'AdminDashboardScreen adapts cleanly at mobile 390x844 with zero overflow',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(_buildDashboardTestApp());
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('dashboard_menu_button')), findsOneWidget);
+    expect(find.text('Dashboard'), findsOneWidget);
+    expect(find.text('New Sale'), findsOneWidget);
+    expect(find.text("Today's Sales"), findsOneWidget);
+    expect(find.text('Last 7 Days Sales'), findsOneWidget);
+    expect(find.text('Recent Alerts'), findsOneWidget);
+    expect(find.text('Inventory Watchlist'), findsOneWidget);
   });
 }

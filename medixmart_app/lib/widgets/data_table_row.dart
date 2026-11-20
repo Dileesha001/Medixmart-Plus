@@ -41,42 +41,71 @@ class DataTableHeaderRow extends StatelessWidget {
             flex: _WatchlistColFlex.medicineName,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('MEDICINE NAME', style: headerStyle),
+              child: Text(
+                'MEDICINE NAME',
+                style: headerStyle,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
+          const SizedBox(width: MmSpacing.sm),
           Expanded(
             flex: _WatchlistColFlex.category,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('CATEGORY', style: headerStyle),
+              child: Text(
+                'CATEGORY',
+                style: headerStyle,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
+          const SizedBox(width: MmSpacing.sm),
           Expanded(
             flex: _WatchlistColFlex.earliestBatch,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('EARLIEST BATCH (FEFO)', style: headerStyle),
+              child: Text(
+                'EARLIEST BATCH (FEFO)',
+                style: headerStyle,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
+          const SizedBox(width: MmSpacing.sm),
           Expanded(
             flex: _WatchlistColFlex.totalStock,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('TOTAL STOCK', style: headerStyle),
+              child: Text(
+                'TOTAL STOCK',
+                style: headerStyle,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
+          const SizedBox(width: MmSpacing.sm),
           Expanded(
             flex: _WatchlistColFlex.unitPrice,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('UNIT PRICE', style: headerStyle),
+              child: Text(
+                'UNIT PRICE',
+                style: headerStyle,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
+          const SizedBox(width: MmSpacing.sm),
           Expanded(
             flex: _WatchlistColFlex.status,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: Text('STATUS', style: headerStyle),
+              child: Text(
+                'STATUS',
+                style: headerStyle,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ),
         ],
@@ -130,6 +159,7 @@ class InventoryWatchlistRow extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: MmSpacing.sm),
               Expanded(
                 flex: _WatchlistColFlex.category,
                 child: Align(
@@ -143,6 +173,7 @@ class InventoryWatchlistRow extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: MmSpacing.sm),
               Expanded(
                 flex: _WatchlistColFlex.earliestBatch,
                 child: Align(
@@ -156,6 +187,7 @@ class InventoryWatchlistRow extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: MmSpacing.sm),
               Expanded(
                 flex: _WatchlistColFlex.totalStock,
                 child: Align(
@@ -169,6 +201,7 @@ class InventoryWatchlistRow extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: MmSpacing.sm),
               Expanded(
                 flex: _WatchlistColFlex.unitPrice,
                 child: Align(
@@ -182,6 +215,7 @@ class InventoryWatchlistRow extends StatelessWidget {
                   ),
                 ),
               ),
+              const SizedBox(width: MmSpacing.sm),
               Expanded(
                 flex: _WatchlistColFlex.status,
                 child: Align(
