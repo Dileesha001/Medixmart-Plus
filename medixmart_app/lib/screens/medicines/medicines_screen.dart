@@ -192,8 +192,16 @@ class _MedicinesScreenState extends State<MedicinesScreen> {
     if (!confirmed || !mounted) return;
 
     try {
-      await context.read<MedicineProvider>().deactivateMedicine(medicine.id);
-      _showSnackBar("Medicine '${medicine.name}' deactivated.");
+      final provider = context.read<MedicineProvider>();
+      await provider.deactivateMedicine(medicine.id);
+      if (provider.errorMessage != null) {
+        _showSnackBar(
+          "Medicine '${medicine.name}' deactivated, but catalog refresh failed. Tap Retry to reload.",
+          isError: true,
+        );
+      } else {
+        _showSnackBar("Medicine '${medicine.name}' deactivated.");
+      }
     } on ApiException catch (e) {
       _showSnackBar(e.message, isError: true);
     } catch (_) {
@@ -203,8 +211,16 @@ class _MedicinesScreenState extends State<MedicinesScreen> {
 
   Future<void> _handleReactivate(MedicineModel medicine) async {
     try {
-      await context.read<MedicineProvider>().reactivateMedicine(medicine.id);
-      _showSnackBar("Medicine '${medicine.name}' reactivated.");
+      final provider = context.read<MedicineProvider>();
+      await provider.reactivateMedicine(medicine.id);
+      if (provider.errorMessage != null) {
+        _showSnackBar(
+          "Medicine '${medicine.name}' reactivated, but catalog refresh failed. Tap Retry to reload.",
+          isError: true,
+        );
+      } else {
+        _showSnackBar("Medicine '${medicine.name}' reactivated.");
+      }
     } on ApiException catch (e) {
       _showSnackBar(e.message, isError: true);
     } catch (_) {
@@ -618,6 +634,51 @@ class _MedicinesScreenState extends State<MedicinesScreen> {
               minHeight: 2,
               backgroundColor: MmColors.bgBrandSubtle,
               valueColor: AlwaysStoppedAnimation<Color>(MmColors.bgBrand),
+            ),
+
+          if (provider.errorMessage != null && provider.medicines.isNotEmpty)
+            Container(
+              key: const Key('medicines_inline_error_banner'),
+              padding: const EdgeInsets.symmetric(
+                horizontal: MmSpacing.lg,
+                vertical: MmSpacing.md,
+              ),
+              decoration: const BoxDecoration(
+                color: MmColors.bgDangerSubtle,
+                border: Border(
+                  bottom: BorderSide(
+                    color: MmColors.borderDanger,
+                    width: MmElevation.strokeThin,
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    size: 18,
+                    color: MmColors.textDanger,
+                  ),
+                  const SizedBox(width: MmSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      provider.errorMessage!,
+                      style: MmTypography.bodySmall.copyWith(
+                        color: MmColors.textDanger,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: MmSpacing.md),
+                  MmButton(
+                    key: const Key('medicines_inline_error_retry'),
+                    label: 'Retry',
+                    variant: MmButtonVariant.secondary,
+                    size: MmButtonSize.small,
+                    onPressed:
+                        provider.isRefreshing ? null : () => provider.refresh(),
+                  ),
+                ],
+              ),
             ),
 
           if (provider.isLoading && provider.medicines.isEmpty)

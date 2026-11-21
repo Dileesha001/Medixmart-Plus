@@ -127,6 +127,7 @@ class _InMemoryMedicineService extends MedicineService {
   int nextMedicineId = 200;
 
   bool failNextFetch = false;
+  bool failNextCategoriesFetch = false;
   bool failNextCreateWithDuplicate = false;
   int pageSizeOverride = 20;
 
@@ -135,6 +136,14 @@ class _InMemoryMedicineService extends MedicineService {
 
   @override
   Future<List<CategoryModel>> fetchCategories() async {
+    if (failNextCategoriesFetch) {
+      failNextCategoriesFetch = false;
+      throw const ApiException(
+        code: 'NETWORK_ERROR',
+        message: 'Unable to load categories.',
+        statusCode: 0,
+      );
+    }
     return List.unmodifiable(categories);
   }
 
@@ -788,5 +797,203 @@ void main() {
     expect(medicineProvider.statusFilter, MedicineStatusFilter.active);
     expect(find.text('Panadol ActiFast'), findsOneWidget);
     expect(find.byKey(const Key('medicines_add_button')), findsNothing);
+  });
+
+  testWidgets(
+      'MedicinesScreen displays inline error banner with Retry when post-initial reload fails while keeping existing rows visible',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final service = _InMemoryMedicineService();
+    await tester.pumpWidget(
+      _wrapMedicinesScreen(service: service, user: adminUser),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Panadol ActiFast'), findsOneWidget);
+
+    // Trigger post-initial failure on status filter change
+    service.failNextFetch = true;
+    await tester.tap(find.byKey(const Key('medicines_status_inactive')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('medicines_inline_error_banner')), findsOneWidget);
+    expect(find.text('Unable to reach pharmacy server.'), findsOneWidget);
+    // Previous rows stay visible until retry succeeds
+    expect(find.text('Panadol ActiFast'), findsOneWidget);
+
+    // Tapping Retry in banner recovers and displays Inactive items
+    await tester.tap(find.byKey(const Key('medicines_inline_error_retry')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('medicines_inline_error_banner')), findsNothing);
+    expect(find.text('Old Pain Relief'), findsOneWidget);
+  });
+
+  testWidgets(
+      'Session revocation while MedicineFormDialog is open automatically closes the modal and returns to LoginScreen',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = _TestTokenStorage({
+      AuthProvider.tokenStorageKey: 'admin-jwt',
+    });
+    final authProvider = AuthProvider(
+      tokenStorage: storage,
+      initialStatus: AuthStatus.authenticated,
+      initialUser: adminUser,
+      initialToken: 'admin-jwt',
+    );
+    final apiClient = ApiClient(
+      httpClient: MockClient((request) async {
+        if (request.method == 'GET' && request.url.path == '/api/categories') {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': [
+                {'id': 1, 'name': 'Analgesics', 'description': 'Pain relief'},
+              ],
+            }),
+            200,
+          );
+        }
+        if (request.method == 'GET' && request.url.path == '/api/medicines') {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': [],
+              'meta': {
+                'page': 1,
+                'limit': 20,
+                'totalRecords': 0,
+                'totalPages': 1,
+                'hasNextPage': false,
+                'hasPrevPage': false,
+              },
+            }),
+            200,
+          );
+        }
+        // POST /api/medicines returns 403 AUTH_ACCOUNT_DISABLED
+        return http.Response(
+          jsonEncode({
+            'success': false,
+            'error': {
+              'code': 'AUTH_ACCOUNT_DISABLED',
+              'message': 'Account disabled during edit.',
+            },
+          }),
+          403,
+        );
+      }),
+      tokenStorage: storage,
+      baseUrlOverride: 'http://127.0.0.1:3000/api',
+    );
+    final medicineProvider = MedicineProvider(
+      service: MedicineService(apiClient),
+    );
+
+    await tester.pumpWidget(
+      MedixmartApp(
+        authProvider: authProvider,
+        apiClient: apiClient,
+        medicineProvider: medicineProvider,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Medicines'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('medicines_add_button')));
+    await tester.pumpAndSettle();
+
+    // Select category and fill required fields
+    await tester.tap(find.byKey(const Key('medicine_form_category')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Analgesics').last);
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('medicine_form_name')),
+      'Test Med',
+    );
+    await tester.enterText(
+      find.byKey(const Key('medicine_form_selling_price')),
+      '50.00',
+    );
+
+    await tester.tap(find.byKey(const Key('medicine_form_submit')));
+    await tester.pumpAndSettle();
+
+    // Modal must be dismissed and LoginScreen visible on top
+    expect(find.byKey(const Key('medicine_form_submit')), findsNothing);
+    expect(find.text('Staff Sign In'), findsOneWidget);
+    expect(find.text('Account disabled during edit.'), findsOneWidget);
+  });
+
+  testWidgets(
+      'CategoryModal scrolls without overflow when Admin form shows error and category filter has zero matches on compact viewport',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(390, 600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final service = _InMemoryMedicineService();
+    await tester.pumpWidget(
+      _wrapMedicinesScreen(service: service, user: adminUser),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('medicines_categories_button')));
+    await tester.pumpAndSettle();
+
+    // Trigger duplicate error banner in Admin form
+    await tester.enterText(
+      find.byKey(const Key('category_name_input')),
+      'Analgesics',
+    );
+    await tester.tap(find.byKey(const Key('category_submit_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Category already exists.'), findsOneWidget);
+
+    // Filter categories to 0 matches to render empty state inside dialog
+    await tester.enterText(
+      find.byKey(const Key('category_search_input')),
+      'zzz-no-match',
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('No matching categories'), findsOneWidget);
+  });
+
+  testWidgets(
+      'Admin Edit Medicine preserves initial category option even when categories fetch failed',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final service = _InMemoryMedicineService()..failNextCategoriesFetch = true;
+    await tester.pumpWidget(
+      _wrapMedicinesScreen(service: service, user: adminUser),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('medicine_edit_101')));
+    await tester.pumpAndSettle();
+
+    // Existing category "Analgesics" stays selected and savable
+    expect(find.text('Analgesics'), findsWidgets);
+    await tester.tap(find.byKey(const Key('medicine_form_submit')));
+    await tester.pumpAndSettle();
+    expect(service.lastUpdateInput?.categoryId, 1);
   });
 }

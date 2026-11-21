@@ -31,6 +31,7 @@ class MedixmartApp extends StatefulWidget {
 }
 
 class _MedixmartAppState extends State<MedixmartApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   late final AuthProvider _authProvider;
   late final DashboardProvider _dashboardProvider;
   late final ApiClient _apiClient;
@@ -73,6 +74,7 @@ class _MedixmartAppState extends State<MedixmartApp> {
     if (!_authProvider.isAuthenticated) {
       _medicineProvider.reset();
       _dashboardProvider.selectNavItem('dashboard');
+      _navigatorKey.currentState?.popUntil((route) => route.isFirst);
     }
   }
 
@@ -101,6 +103,7 @@ class _MedixmartAppState extends State<MedixmartApp> {
         ),
       ],
       child: MaterialApp(
+        navigatorKey: _navigatorKey,
         title: 'Medixmart Plus',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,

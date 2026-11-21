@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_theme.dart';
 import '../../models/api_exception.dart';
+import '../../models/category_model.dart';
 import '../../models/medicine_model.dart';
 import '../../providers/medicine_provider.dart';
 import '../../widgets/mm_button.dart';
@@ -212,7 +213,19 @@ class _MedicineFormDialogState extends State<_MedicineFormDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final categories = context.watch<MedicineProvider>().categories;
+    final provider = context.watch<MedicineProvider>();
+    final categories = List<CategoryModel>.from(provider.categories);
+    final initialMed = widget.initialMedicine;
+    if (initialMed != null &&
+        !categories.any((c) => c.id == initialMed.categoryId)) {
+      categories.insert(
+        0,
+        CategoryModel(
+          id: initialMed.categoryId,
+          name: initialMed.categoryName ?? 'Category #${initialMed.categoryId}',
+        ),
+      );
+    }
     final hasSelectedCategory = _selectedCategoryId != null &&
         categories.any((c) => c.id == _selectedCategoryId);
     final effectiveCategoryId = hasSelectedCategory ? _selectedCategoryId : null;

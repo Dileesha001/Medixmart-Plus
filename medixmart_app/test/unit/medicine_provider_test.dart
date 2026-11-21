@@ -492,5 +492,161 @@ void main() {
       expect(provider.statusFilter, MedicineStatusFilter.active);
       expect(provider.errorMessage, isNull);
     });
+
+    test(
+        'loadCategories surfaces categoriesError on failure and discards stale results arriving after reset',
+        () async {
+      final service = _FakeMedicineService();
+      service.onFetchCategories = () async {
+        throw const ApiException(
+          code: 'NETWORK_ERROR',
+          message: 'Categories endpoint unavailable.',
+          statusCode: 0,
+        );
+      };
+
+      final provider = MedicineProvider(service: service);
+      addTearDown(provider.dispose);
+
+      await provider.ensureLoaded();
+      expect(provider.categoriesError, 'Categories endpoint unavailable.');
+      expect(provider.categories, isEmpty);
+
+      // Now simulate slow categories fetch that resolves after reset()
+      final slowCats = Completer<List<CategoryModel>>();
+      service.onFetchCategories = () => slowCats.future;
+      final loadFuture = provider.loadCategories();
+      provider.reset();
+      slowCats.complete(const [
+        CategoryModel(id: 7, name: 'Stale After Logout'),
+      ]);
+      await loadFuture;
+
+      expect(provider.categories, isEmpty);
+      expect(provider.categoriesError, isNull);
+    });
+
+    test(
+        'fetchMedicines automatically clamps back to totalPages when backend returns empty items for an out-of-bounds page',
+        () async {
+      final service = _FakeMedicineService();
+      var editedOutOfFilter = false;
+      service.onUpdateMedicine = (id, input) async {
+        editedOutOfFilter = true;
+        return MedicineModel(
+          id: id,
+          categoryId: input.categoryId,
+          name: input.name,
+          sellingPrice: input.sellingPrice,
+        );
+      };
+      service.onFetchMedicines = (req) async {
+        if (req.page == 2) {
+          if (editedOutOfFilter) {
+            return const PaginatedResponse(
+              items: [],
+              pagination: PaginationMeta(
+                page: 2,
+                limit: 20,
+                totalRecords: 20,
+                totalPages: 1,
+                hasNextPage: false,
+                hasPrevPage: true,
+              ),
+            );
+          }
+          return const PaginatedResponse(
+            items: [
+              MedicineModel(
+                id: 21,
+                categoryId: 1,
+                name: 'Page 2 Item',
+                sellingPrice: 10,
+              ),
+            ],
+            pagination: PaginationMeta(
+              page: 2,
+              limit: 20,
+              totalRecords: 21,
+              totalPages: 2,
+              hasNextPage: false,
+              hasPrevPage: true,
+            ),
+          );
+        }
+        return PaginatedResponse(
+          items: const [
+            MedicineModel(
+              id: 1,
+              categoryId: 1,
+              name: 'Page 1 Item',
+              sellingPrice: 10,
+            ),
+          ],
+          pagination: PaginationMeta(
+            page: 1,
+            limit: 20,
+            totalRecords: editedOutOfFilter ? 20 : 21,
+            totalPages: editedOutOfFilter ? 1 : 2,
+            hasNextPage: !editedOutOfFilter,
+            hasPrevPage: false,
+          ),
+        );
+      };
+
+      final provider = MedicineProvider(service: service);
+      addTearDown(provider.dispose);
+
+      await provider.ensureLoaded();
+      await provider.goToPage(2);
+      expect(provider.pagination.page, 2);
+
+      await provider.updateMedicine(
+        21,
+        const MedicineInput(categoryId: 2, name: 'Moved Item', sellingPrice: 10),
+      );
+
+      expect(provider.pagination.page, 1);
+      expect(provider.medicines.single.name, 'Page 1 Item');
+    });
+
+    test('filter, sort, page, and refresh calls cancel any pending search debounce timer',
+        () async {
+      final service = _FakeMedicineService();
+      service.onFetchMedicines = (req) async {
+        return PaginatedResponse(
+          items: const [
+            MedicineModel(id: 1, categoryId: 1, name: 'Item', sellingPrice: 10),
+          ],
+          pagination: PaginationMeta(
+            page: req.page,
+            limit: 20,
+            totalRecords: 40,
+            totalPages: 2,
+            hasNextPage: req.page < 2,
+            hasPrevPage: req.page > 1,
+          ),
+        );
+      };
+
+      final provider = MedicineProvider(
+        service: service,
+        searchDebounce: const Duration(milliseconds: 40),
+      );
+      addTearDown(provider.dispose);
+
+      await provider.ensureLoaded();
+      final countAfterInit = service.fetchRequests.length;
+
+      provider.setSearchQuery('amo');
+      // Immediately navigate to page 2 before debounce fires
+      await provider.goToPage(2);
+      expect(provider.pagination.page, 2);
+
+      // Wait past debounce window — pending timer must NOT fire and snap back to page 1
+      await Future<void>.delayed(const Duration(milliseconds: 70));
+      expect(provider.pagination.page, 2);
+      expect(service.fetchRequests.length, countAfterInit + 1);
+    });
   });
 }

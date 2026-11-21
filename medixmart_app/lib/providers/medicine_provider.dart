@@ -48,6 +48,7 @@ class MedicineProvider extends ChangeNotifier {
   bool _hasLoadedOnce = false;
   bool _isDisposed = false;
   String? _errorMessage;
+  String? _categoriesError;
 
   String _searchQuery = '';
   int? _selectedCategoryId;
@@ -57,6 +58,7 @@ class MedicineProvider extends ChangeNotifier {
   int _currentPage = 1;
 
   int _requestSeq = 0;
+  int _resetEpoch = 0;
   Timer? _searchDebounceTimer;
 
   MedicineProvider({
@@ -74,6 +76,7 @@ class MedicineProvider extends ChangeNotifier {
   bool get isMutating => _isMutating;
   bool get hasLoadedOnce => _hasLoadedOnce;
   String? get errorMessage => _errorMessage;
+  String? get categoriesError => _categoriesError;
 
   String get searchQuery => _searchQuery;
   int? get selectedCategoryId => _selectedCategoryId;
@@ -103,6 +106,7 @@ class MedicineProvider extends ChangeNotifier {
 
   /// Reloads categories and the current medicines page from the server.
   Future<void> refresh() async {
+    _searchDebounceTimer?.cancel();
     await Future.wait([
       loadCategories(),
       _fetchMedicines(page: _currentPage),
@@ -110,18 +114,28 @@ class MedicineProvider extends ChangeNotifier {
   }
 
   Future<void> loadCategories() async {
+    final epoch = _resetEpoch;
     _isCategoriesLoading = true;
+    _categoriesError = null;
     _safeNotify();
     try {
       final fetched = await _service.fetchCategories();
+      if (epoch != _resetEpoch || _isDisposed) return;
       final sorted = List<CategoryModel>.from(fetched)
         ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
       _categories = List.unmodifiable(sorted);
+      _categoriesError = null;
+    } on ApiException catch (e) {
+      if (epoch != _resetEpoch || _isDisposed) return;
+      _categoriesError = e.message;
     } catch (_) {
-      // Categories failure is surfaced if medicines also fail or on explicit retry.
+      if (epoch != _resetEpoch || _isDisposed) return;
+      _categoriesError = 'Unable to load categories.';
     } finally {
-      _isCategoriesLoading = false;
-      _safeNotify();
+      if (epoch == _resetEpoch && !_isDisposed) {
+        _isCategoriesLoading = false;
+        _safeNotify();
+      }
     }
   }
 
@@ -139,6 +153,7 @@ class MedicineProvider extends ChangeNotifier {
   }
 
   Future<void> setCategoryFilter(int? categoryId) async {
+    _searchDebounceTimer?.cancel();
     if (_selectedCategoryId == categoryId) return;
     _selectedCategoryId = categoryId;
     _currentPage = 1;
@@ -146,6 +161,7 @@ class MedicineProvider extends ChangeNotifier {
   }
 
   Future<void> setStatusFilter(MedicineStatusFilter filter) async {
+    _searchDebounceTimer?.cancel();
     if (_statusFilter == filter) return;
     _statusFilter = filter;
     _currentPage = 1;
@@ -156,6 +172,7 @@ class MedicineProvider extends ChangeNotifier {
     MedicineSortField field, {
     required bool ascending,
   }) async {
+    _searchDebounceTimer?.cancel();
     if (_sortField == field && _sortAscending == ascending) return;
     _sortField = field;
     _sortAscending = ascending;
@@ -175,13 +192,17 @@ class MedicineProvider extends ChangeNotifier {
   }
 
   Future<void> goToPage(int page) async {
+    _searchDebounceTimer?.cancel();
     final target = page.clamp(1, _pagination.totalPages);
     if (target == _currentPage && _hasLoadedOnce) return;
     _currentPage = target;
     await _fetchMedicines(page: target);
   }
 
-  Future<void> _fetchMedicines({required int page}) async {
+  Future<void> _fetchMedicines({
+    required int page,
+    bool allowClampRetry = true,
+  }) async {
     final seq = ++_requestSeq;
     final showFullLoader =
         !_hasLoadedOnce || (_medicines.isEmpty && _errorMessage != null);
@@ -206,6 +227,18 @@ class MedicineProvider extends ChangeNotifier {
       );
 
       if (seq != _requestSeq || _isDisposed) return;
+
+      // Guard against backend returning an empty out-of-bounds page (e.g. after
+      // edit or concurrent deletion shrinks totalPages while viewing page > 1).
+      if (allowClampRetry &&
+          response.items.isEmpty &&
+          response.pagination.totalRecords > 0 &&
+          response.pagination.page > response.pagination.totalPages) {
+        final clampedPage = response.pagination.totalPages;
+        _currentPage = clampedPage;
+        await _fetchMedicines(page: clampedPage, allowClampRetry: false);
+        return;
+      }
 
       _medicines = List.unmodifiable(response.items);
       _pagination = response.pagination;
@@ -251,17 +284,21 @@ class MedicineProvider extends ChangeNotifier {
     required String name,
     String? description,
   }) {
+    final epoch = _resetEpoch;
     return _runMutation(() async {
       final created = await _service.createCategory(
         name: name,
         description: description,
       );
-      final updated = [
-        ..._categories.where((c) => c.id != created.id),
-        created,
-      ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-      _categories = List.unmodifiable(updated);
-      _safeNotify();
+      if (epoch == _resetEpoch && !_isDisposed) {
+        final updated = [
+          ..._categories.where((c) => c.id != created.id),
+          created,
+        ]..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        _categories = List.unmodifiable(updated);
+        _categoriesError = null;
+        _safeNotify();
+      }
       return created;
     });
   }
@@ -312,6 +349,7 @@ class MedicineProvider extends ChangeNotifier {
     _searchDebounceTimer?.cancel();
     _searchDebounceTimer = null;
     _requestSeq++;
+    _resetEpoch++;
 
     final hadState = _hasLoadedOnce ||
         _medicines.isNotEmpty ||
@@ -323,8 +361,10 @@ class MedicineProvider extends ChangeNotifier {
         !_sortAscending ||
         _currentPage != 1 ||
         _errorMessage != null ||
+        _categoriesError != null ||
         _isLoading ||
-        _isRefreshing;
+        _isRefreshing ||
+        _isCategoriesLoading;
 
     _categories = const [];
     _medicines = const [];
@@ -334,6 +374,7 @@ class MedicineProvider extends ChangeNotifier {
     _isCategoriesLoading = false;
     _hasLoadedOnce = false;
     _errorMessage = null;
+    _categoriesError = null;
     _searchQuery = '';
     _selectedCategoryId = null;
     _statusFilter = MedicineStatusFilter.active;

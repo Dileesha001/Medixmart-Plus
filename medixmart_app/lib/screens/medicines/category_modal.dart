@@ -149,7 +149,7 @@ class _CategoryModalDialogState extends State<_CategoryModalDialog> {
       ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520, maxHeight: 640),
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(MmSpacing.xxl),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -285,63 +285,72 @@ class _CategoryModalDialogState extends State<_CategoryModalDialog> {
               ),
               const SizedBox(height: MmSpacing.md),
 
-              // Category list
-              Flexible(
-                child: filteredCategories.isEmpty
-                    ? MmEmptyState(
-                        icon: Icons.category_outlined,
-                        title: provider.categories.isEmpty
-                            ? 'No categories yet'
-                            : 'No matching categories',
-                        message: provider.categories.isEmpty
-                            ? 'Create a category to organize your medicine catalog.'
-                            : 'Try a different category search term.',
-                      )
-                    : Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(MmRadius.md),
-                          border: Border.all(
-                            color: MmColors.borderDefault,
-                            width: MmElevation.strokeThin,
-                          ),
-                        ),
-                        child: ListView.separated(
-                          shrinkWrap: true,
-                          itemCount: filteredCategories.length,
-                          separatorBuilder: (_, __) => const Divider(
-                            height: 1,
-                            color: MmColors.borderDefault,
-                          ),
-                          itemBuilder: (context, index) {
-                            final category = filteredCategories[index];
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: MmSpacing.md,
-                                vertical: MmSpacing.sm,
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    category.name,
-                                    style: MmTypography.labelLarge,
-                                  ),
-                                  const SizedBox(height: MmSpacing.xxs),
-                                  Text(
-                                    category.description ?? 'No description',
-                                    style: MmTypography.bodySmall.copyWith(
-                                      color: category.description != null
-                                          ? MmColors.textSecondary
-                                          : MmColors.textMuted,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+              // Category list / error / empty state
+              if (provider.categoriesError != null &&
+                  provider.categories.isEmpty)
+                MmErrorState(
+                  title: 'Could not load categories',
+                  message: provider.categoriesError!,
+                  onRetry: () => provider.loadCategories(),
+                )
+              else if (filteredCategories.isEmpty)
+                MmEmptyState(
+                  icon: Icons.category_outlined,
+                  title: provider.categories.isEmpty
+                      ? 'No categories yet'
+                      : 'No matching categories',
+                  message: provider.categories.isEmpty
+                      ? 'Create a category to organize your medicine catalog.'
+                      : 'Try a different category search term.',
+                )
+              else
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 260),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(MmRadius.md),
+                      border: Border.all(
+                        color: MmColors.borderDefault,
+                        width: MmElevation.strokeThin,
                       ),
-              ),
+                    ),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      itemCount: filteredCategories.length,
+                      separatorBuilder: (_, __) => const Divider(
+                        height: 1,
+                        color: MmColors.borderDefault,
+                      ),
+                      itemBuilder: (context, index) {
+                        final category = filteredCategories[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: MmSpacing.md,
+                            vertical: MmSpacing.sm,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                category.name,
+                                style: MmTypography.labelLarge,
+                              ),
+                              const SizedBox(height: MmSpacing.xxs),
+                              Text(
+                                category.description ?? 'No description',
+                                style: MmTypography.bodySmall.copyWith(
+                                  color: category.description != null
+                                      ? MmColors.textSecondary
+                                      : MmColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
