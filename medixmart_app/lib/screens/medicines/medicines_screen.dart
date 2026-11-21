@@ -471,31 +471,36 @@ class _MedicinesScreenState extends State<MedicinesScreen> {
         // Category dropdown
         SizedBox(
           width: 210,
-          child: DropdownButtonFormField<int?>(
-            key: const Key('medicines_category_filter'),
-            value: validSelectedCategoryId,
-            isExpanded: true,
+          child: InputDecorator(
             decoration: _toolbarDropdownDecoration(),
-            items: [
-              DropdownMenuItem<int?>(
-                value: null,
-                child: Text(
-                  'All Categories',
-                  style: MmTypography.bodyMedium,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              for (final cat in provider.categories)
-                DropdownMenuItem<int?>(
-                  value: cat.id,
-                  child: Text(
-                    cat.name,
-                    style: MmTypography.bodyMedium,
-                    overflow: TextOverflow.ellipsis,
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<int?>(
+                key: const Key('medicines_category_filter'),
+                value: validSelectedCategoryId,
+                isExpanded: true,
+                isDense: true,
+                items: [
+                  DropdownMenuItem<int?>(
+                    value: null,
+                    child: Text(
+                      'All Categories',
+                      style: MmTypography.bodyMedium,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-            ],
-            onChanged: (value) => provider.setCategoryFilter(value),
+                  for (final cat in provider.categories)
+                    DropdownMenuItem<int?>(
+                      value: cat.id,
+                      child: Text(
+                        cat.name,
+                        style: MmTypography.bodyMedium,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (value) => provider.setCategoryFilter(value),
+              ),
+            ),
           ),
         ),
 
@@ -542,27 +547,32 @@ class _MedicinesScreenState extends State<MedicinesScreen> {
         // Sort dropdown
         SizedBox(
           width: 190,
-          child: DropdownButtonFormField<String>(
-            key: const Key('medicines_sort_dropdown'),
-            value: _currentSortOptionId(provider),
-            isExpanded: true,
+          child: InputDecorator(
             decoration: _toolbarDropdownDecoration(),
-            items: [
-              for (final opt in _kSortOptions)
-                DropdownMenuItem<String>(
-                  value: opt.id,
-                  child: Text(
-                    opt.label,
-                    style: MmTypography.bodyMedium,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-            ],
-            onChanged: (id) {
-              if (id == null) return;
-              final opt = _kSortOptions.firstWhere((o) => o.id == id);
-              provider.setSort(opt.field, ascending: opt.ascending);
-            },
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                key: const Key('medicines_sort_dropdown'),
+                value: _currentSortOptionId(provider),
+                isExpanded: true,
+                isDense: true,
+                items: [
+                  for (final opt in _kSortOptions)
+                    DropdownMenuItem<String>(
+                      value: opt.id,
+                      child: Text(
+                        opt.label,
+                        style: MmTypography.bodyMedium,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                ],
+                onChanged: (id) {
+                  if (id == null) return;
+                  final opt = _kSortOptions.firstWhere((o) => o.id == id);
+                  provider.setSort(opt.field, ascending: opt.ascending);
+                },
+              ),
+            ),
           ),
         ),
 

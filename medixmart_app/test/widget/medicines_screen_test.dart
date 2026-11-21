@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:medixmart_app/config/app_theme.dart';
-import 'package:medixmart_app/models/api_exception.dart';
+import 'package:medixmart_app/main.dart';
 import 'package:medixmart_app/models/category_model.dart';
 import 'package:medixmart_app/models/medicine_model.dart';
 import 'package:medixmart_app/models/paginated_response.dart';
@@ -10,8 +13,45 @@ import 'package:medixmart_app/providers/auth_provider.dart';
 import 'package:medixmart_app/providers/medicine_provider.dart';
 import 'package:medixmart_app/screens/medicines/medicines_screen.dart';
 import 'package:medixmart_app/services/api_client.dart';
+import 'package:medixmart_app/services/auth_service.dart';
 import 'package:medixmart_app/services/medicine_service.dart';
 import 'package:provider/provider.dart';
+
+class _TestTokenStorage implements TokenStorage {
+  final Map<String, String> store;
+  _TestTokenStorage([Map<String, String>? initial])
+      : store = Map<String, String>.from(initial ?? const {});
+
+  @override
+  Future<String?> read(String key) async => store[key];
+
+  @override
+  Future<void> write(String key, String value) async => store[key] = value;
+
+  @override
+  Future<void> delete(String key) async => store.remove(key);
+}
+
+class _StubAuthService extends AuthService {
+  const _StubAuthService();
+
+  @override
+  Future<AuthResponse> login(String username, String password) async {
+    return const AuthResponse(
+      token: 'pharma-jwt',
+      user: UserModel(
+        id: 2,
+        username: 'pharma',
+        role: 'pharmacist',
+        fullName: 'Saman Silva',
+      ),
+      expiresIn: '8h',
+    );
+  }
+
+  @override
+  Future<void> logout(String token) async {}
+}
 
 class _InMemoryMedicineService extends MedicineService {
   _InMemoryMedicineService({
@@ -614,5 +654,139 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Panadol ActiFast'), findsOneWidget);
+  });
+
+  testWidgets(
+      '403 AUTH_ACCOUNT_DISABLED during medicines load revokes session, resets MedicineProvider, and returns AuthGate to LoginScreen with error banner',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = _TestTokenStorage({
+      AuthProvider.tokenStorageKey: 'admin-jwt',
+    });
+    final authProvider = AuthProvider(
+      tokenStorage: storage,
+      initialStatus: AuthStatus.authenticated,
+      initialUser: adminUser,
+      initialToken: 'admin-jwt',
+    );
+    final apiClient = ApiClient(
+      httpClient: MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'success': false,
+            'error': {
+              'code': 'AUTH_ACCOUNT_DISABLED',
+              'message': 'Your account has been disabled by an administrator.',
+            },
+          }),
+          403,
+        );
+      }),
+      tokenStorage: storage,
+      baseUrlOverride: 'http://127.0.0.1:3000/api',
+    );
+    final medicineProvider = MedicineProvider(
+      service: MedicineService(apiClient),
+    );
+
+    await tester.pumpWidget(
+      MedixmartApp(
+        authProvider: authProvider,
+        apiClient: apiClient,
+        medicineProvider: medicineProvider,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Navigate to Medicines, triggering protected API fetch that returns 403 AUTH_ACCOUNT_DISABLED
+    await tester.tap(find.text('Medicines'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Staff Sign In'), findsOneWidget);
+    expect(
+      find.text('Your account has been disabled by an administrator.'),
+      findsOneWidget,
+    );
+    expect(storage.store.containsKey(AuthProvider.tokenStorageKey), isFalse);
+    expect(medicineProvider.hasLoadedOnce, isFalse);
+    expect(medicineProvider.medicines, isEmpty);
+  });
+
+  testWidgets(
+      'Logging out and signing in as pharmacist resets cached MedicineProvider state and hides Admin actions',
+      (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1440, 900);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final storage = _TestTokenStorage({
+      AuthProvider.tokenStorageKey: 'admin-jwt',
+    });
+    final authProvider = AuthProvider(
+      authService: const _StubAuthService(),
+      tokenStorage: storage,
+      initialStatus: AuthStatus.authenticated,
+      initialUser: adminUser,
+      initialToken: 'admin-jwt',
+    );
+    final service = _InMemoryMedicineService();
+    final medicineProvider = MedicineProvider(
+      service: service,
+      searchDebounce: const Duration(milliseconds: 10),
+    );
+
+    await tester.pumpWidget(
+      MedixmartApp(
+        authProvider: authProvider,
+        medicineProvider: medicineProvider,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Admin opens Medicines and sets Inactive filter
+    await tester.tap(find.text('Medicines'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('medicines_add_button')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('medicines_status_inactive')));
+    await tester.pumpAndSettle();
+    expect(medicineProvider.statusFilter, MedicineStatusFilter.inactive);
+
+    // Sign out -> resets MedicineProvider & returns to LoginScreen
+    await tester.tap(find.byKey(const Key('sidebar_logout_button')));
+    await tester.pumpAndSettle();
+    expect(find.text('Staff Sign In'), findsOneWidget);
+    expect(medicineProvider.hasLoadedOnce, isFalse);
+    expect(medicineProvider.medicines, isEmpty);
+    expect(medicineProvider.statusFilter, MedicineStatusFilter.active);
+
+    // Sign back in as Pharmacist
+    await tester.enterText(
+      find.byKey(const Key('login_username_field')),
+      'pharma',
+    );
+    await tester.enterText(
+      find.byKey(const Key('login_password_field')),
+      'Pharma@123',
+    );
+    await tester.tap(find.byKey(const Key('login_submit_button')));
+    await tester.pumpAndSettle();
+
+    // Lands back on Dashboard (not stuck on Medicines) with Add Medicine hidden
+    expect(find.text("Today's Sales"), findsOneWidget);
+    expect(find.text('Add Medicine'), findsNothing);
+
+    await tester.tap(find.text('Medicines'));
+    await tester.pumpAndSettle();
+
+    // Pharmacist sees fresh Active filter and no Admin buttons
+    expect(medicineProvider.statusFilter, MedicineStatusFilter.active);
+    expect(find.text('Panadol ActiFast'), findsOneWidget);
+    expect(find.byKey(const Key('medicines_add_button')), findsNothing);
   });
 }

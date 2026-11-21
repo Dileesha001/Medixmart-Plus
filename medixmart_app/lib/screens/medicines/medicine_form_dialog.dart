@@ -49,6 +49,7 @@ class _MedicineFormDialog extends StatefulWidget {
 
 class _MedicineFormDialogState extends State<_MedicineFormDialog> {
   final _formKey = GlobalKey<FormState>();
+  final _categoryFieldKey = GlobalKey<FormFieldState<int>>();
   late final TextEditingController _nameController;
   late final TextEditingController _genericController;
   late final TextEditingController _brandController;
@@ -129,6 +130,7 @@ class _MedicineFormDialogState extends State<_MedicineFormDialog> {
         _selectedCategoryId = created.id;
         _clearFieldError('category_id');
       });
+      _categoryFieldKey.currentState?.didChange(created.id);
     }
   }
 
@@ -353,41 +355,44 @@ class _MedicineFormDialogState extends State<_MedicineFormDialog> {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    DropdownButtonFormField<int>(
+                    KeyedSubtree(
                       key: const Key('medicine_form_category'),
-                      value: effectiveCategoryId,
-                      isExpanded: true,
-                      decoration: _dropdownDecoration(
-                        hintText: categories.isEmpty
-                            ? 'Create a category first'
-                            : 'Select category',
-                        errorText: _serverFieldErrors['category_id'],
-                      ),
-                      items: [
-                        for (final cat in categories)
-                          DropdownMenuItem<int>(
-                            value: cat.id,
-                            child: Text(
-                              cat.name,
-                              style: MmTypography.bodyMedium,
-                              overflow: TextOverflow.ellipsis,
+                      child: DropdownButtonFormField<int>(
+                        key: _categoryFieldKey,
+                        initialValue: effectiveCategoryId,
+                        isExpanded: true,
+                        decoration: _dropdownDecoration(
+                          hintText: categories.isEmpty
+                              ? 'Create a category first'
+                              : 'Select category',
+                          errorText: _serverFieldErrors['category_id'],
+                        ),
+                        items: [
+                          for (final cat in categories)
+                            DropdownMenuItem<int>(
+                              value: cat.id,
+                              child: Text(
+                                cat.name,
+                                style: MmTypography.bodyMedium,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                      ],
-                      onChanged: _isSubmitting
-                          ? null
-                          : (value) {
-                              setState(() {
-                                _selectedCategoryId = value;
-                                _clearFieldError('category_id');
-                              });
-                            },
-                      validator: (value) {
-                        if (value == null) {
-                          return 'Please select a category.';
-                        }
-                        return null;
-                      },
+                        ],
+                        onChanged: _isSubmitting
+                            ? null
+                            : (value) {
+                                setState(() {
+                                  _selectedCategoryId = value;
+                                  _clearFieldError('category_id');
+                                });
+                              },
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Please select a category.';
+                          }
+                          return null;
+                        },
+                      ),
                     ),
                   ],
                 ),
@@ -446,7 +451,7 @@ class _MedicineFormDialogState extends State<_MedicineFormDialog> {
                         const SizedBox(height: 6),
                         DropdownButtonFormField<String>(
                           key: const Key('medicine_form_dosage_form'),
-                          value: _selectedDosageForm,
+                          initialValue: _selectedDosageForm,
                           isExpanded: true,
                           decoration: _dropdownDecoration(),
                           items: [
