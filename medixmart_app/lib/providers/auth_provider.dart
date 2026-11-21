@@ -35,7 +35,7 @@ class AuthProvider extends ChangeNotifier {
   final AuthService _authService;
   final TokenStorage _storage;
 
-  static const String _tokenKey = 'medixmart_jwt_token';
+  static const String tokenStorageKey = 'medixmart_jwt_token';
 
   AuthStatus _status;
   bool _isRestoringSession = false;
@@ -55,6 +55,7 @@ class AuthProvider extends ChangeNotifier {
         _user = initialUser,
         _token = initialToken;
 
+  TokenStorage get tokenStorage => _storage;
   AuthStatus get status => _status;
   bool get isRestoringSession => _isRestoringSession;
   bool get isSubmitting => _status == AuthStatus.loading && !_isRestoringSession;
@@ -76,7 +77,7 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final storedToken = await _storage.read(_tokenKey);
+      final storedToken = await _storage.read(tokenStorageKey);
       if (storedToken == null || storedToken.isEmpty) {
         _status = AuthStatus.unauthenticated;
         return;
@@ -89,7 +90,7 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = null;
     } catch (_) {
       try {
-        await _storage.delete(_tokenKey);
+        await _storage.delete(tokenStorageKey);
       } catch (_) {
         // Ignore storage cleanup failure during recovery.
       }
@@ -114,7 +115,7 @@ class AuthProvider extends ChangeNotifier {
       _user = authResponse.user;
       _status = AuthStatus.authenticated;
 
-      await _storage.write(_tokenKey, _token!);
+      await _storage.write(tokenStorageKey, _token!);
       notifyListeners();
       return true;
     } on ApiException catch (e) {
@@ -137,7 +138,7 @@ class AuthProvider extends ChangeNotifier {
       await _authService.logout(activeToken);
     }
     try {
-      await _storage.delete(_tokenKey);
+      await _storage.delete(tokenStorageKey);
     } catch (_) {
       // Proceed with local sign-out even if secure storage throws.
     }
@@ -145,6 +146,24 @@ class AuthProvider extends ChangeNotifier {
     _user = null;
     _status = AuthStatus.unauthenticated;
     _errorMessage = null;
+    notifyListeners();
+  }
+
+  /// Clears stored credentials and transitions back to [AuthStatus.unauthenticated]
+  /// when a protected API response indicates the session is no longer valid.
+  Future<void> handleSessionRevoked([String? reason]) async {
+    try {
+      await _storage.delete(tokenStorageKey);
+    } catch (_) {
+      // Proceed with local sign-out even if secure storage throws.
+    }
+    _isRestoringSession = false;
+    _token = null;
+    _user = null;
+    _status = AuthStatus.unauthenticated;
+    _errorMessage = (reason != null && reason.trim().isNotEmpty)
+        ? reason
+        : 'Your session has expired. Please sign in again.';
     notifyListeners();
   }
 }
