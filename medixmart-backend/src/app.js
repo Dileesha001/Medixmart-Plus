@@ -12,6 +12,7 @@ const userRoutes = require('./routes/user.routes');
 const categoryRoutes = require('./routes/category.routes');
 const medicineRoutes = require('./routes/medicine.routes');
 const alertRoutes = require('./routes/alert.routes');
+const saleRoutes = require('./routes/sale.routes');
 const notFoundHandler = require('./middleware/notFound');
 const errorHandler = require('./middleware/error');
 
@@ -117,6 +118,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/medicines', medicineRoutes);
 app.use('/api/alerts', alertRoutes);
+app.use('/api/sales', saleRoutes);
 
 // 404 Catch-All Handler
 app.use(notFoundHandler);
