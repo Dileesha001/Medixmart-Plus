@@ -2,7 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
+import '../models/api_exception.dart';
 import '../models/user_model.dart';
+
+export '../models/api_exception.dart';
 
 class AuthService {
   final String? _baseUrlOverride;
@@ -142,19 +145,4 @@ class AuthService {
       // Client must wipe local storage regardless of backend state.
     }
   }
-}
-
-class ApiException implements Exception {
-  final String code;
-  final String message;
-  final int statusCode;
-
-  const ApiException({
-    required this.code,
-    required this.message,
-    required this.statusCode,
-  });
-
-  @override
-  String toString() => message;
 }

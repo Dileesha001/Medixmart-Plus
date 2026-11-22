@@ -14,6 +14,7 @@ import '../../widgets/kpi_summary_card.dart';
 import '../../widgets/mm_button.dart';
 import '../../widgets/pos_search_bar.dart';
 import '../../widgets/sidebar_nav_item.dart';
+import '../medicines/medicines_screen.dart';
 
 /// Responsive width breakpoints for the Medixmart Plus Admin Dashboard.
 abstract final class _DashboardBreakpoints {
@@ -37,6 +38,7 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late final TextEditingController _searchController;
+  bool _pendingOpenAddMedicine = false;
 
   @override
   void initState() {
@@ -69,49 +71,62 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _handleNavTap(SidebarNavItemData item, {required bool closeDrawer}) {
-    context.read<DashboardProvider>().selectNavItem(item.id);
     if (closeDrawer) {
       Navigator.of(context).maybePop();
     }
+    if (item.id == 'dashboard' || item.id == 'medicines') {
+      context.read<DashboardProvider>().selectNavItem(item.id);
+      return;
+    }
+    _showWorkflowFeedback(context, '${item.label} module is coming soon.');
   }
 
   @override
   Widget build(BuildContext context) {
+    final selectedNavId = context.select<DashboardProvider, String>(
+      (provider) => provider.selectedNavId,
+    );
+    final authUser = context.watch<AuthProvider?>()?.user;
+    final showAddMedicine = authUser?.isPharmacist != true;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final showPermanentSidebar =
             constraints.maxWidth >= _DashboardBreakpoints.desktopSidebar;
 
-        final mainArea = _DashboardMainArea(
-          searchController: _searchController,
-          showMenuButton: !showPermanentSidebar,
-          onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-          onNewSale: () => _showWorkflowFeedback(
-            context,
-            'Opening POS Checkout for New Sale...',
-          ),
-          onViewAllAlerts: () {
-            context.read<DashboardProvider>().selectNavItem('alerts');
-            _showWorkflowFeedback(
-              context,
-              'Viewing all 20 active stock & expiry alerts.',
-            );
-          },
-          onReceiveBatch: () {
-            context.read<DashboardProvider>().selectNavItem('receive_batches');
-            _showWorkflowFeedback(
-              context,
-              'Opening Receive Batch workflow...',
-            );
-          },
-          onAddMedicine: () {
-            context.read<DashboardProvider>().selectNavItem('medicines');
-            _showWorkflowFeedback(
-              context,
-              'Opening Add Medicine catalog form...',
-            );
-          },
-        );
+        final Widget mainArea = selectedNavId == 'medicines'
+            ? MedicinesScreen(
+                showMenuButton: !showPermanentSidebar,
+                onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+                openCreateOnMount: _pendingOpenAddMedicine,
+                onCreateDialogHandled: () {
+                  if (mounted && _pendingOpenAddMedicine) {
+                    setState(() => _pendingOpenAddMedicine = false);
+                  }
+                },
+              )
+            : _DashboardMainArea(
+                searchController: _searchController,
+                showMenuButton: !showPermanentSidebar,
+                showAddMedicine: showAddMedicine,
+                onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+                onNewSale: () => _showWorkflowFeedback(
+                  context,
+                  'Opening POS Checkout for New Sale...',
+                ),
+                onViewAllAlerts: () => _showWorkflowFeedback(
+                  context,
+                  'Alerts module is coming soon.',
+                ),
+                onReceiveBatch: () => _showWorkflowFeedback(
+                  context,
+                  'Receive Batches module is coming soon.',
+                ),
+                onAddMedicine: () {
+                  setState(() => _pendingOpenAddMedicine = true);
+                  context.read<DashboardProvider>().selectNavItem('medicines');
+                },
+              );
 
         return Scaffold(
           key: _scaffoldKey,
@@ -344,6 +359,7 @@ class _DashboardSidebar extends StatelessWidget {
 class _DashboardMainArea extends StatelessWidget {
   final TextEditingController searchController;
   final bool showMenuButton;
+  final bool showAddMedicine;
   final VoidCallback onOpenDrawer;
   final VoidCallback onNewSale;
   final VoidCallback onViewAllAlerts;
@@ -353,6 +369,7 @@ class _DashboardMainArea extends StatelessWidget {
   const _DashboardMainArea({
     required this.searchController,
     required this.showMenuButton,
+    this.showAddMedicine = true,
     required this.onOpenDrawer,
     required this.onNewSale,
     required this.onViewAllAlerts,
@@ -458,6 +475,7 @@ class _DashboardMainArea extends StatelessWidget {
                     // Inventory Watchlist Card (`46:580`)
                     _InventoryWatchlistCard(
                       items: dashboardProvider.filteredWatchlistItems,
+                      showAddMedicine: showAddMedicine,
                       onReceiveBatch: onReceiveBatch,
                       onAddMedicine: onAddMedicine,
                     ),
@@ -850,11 +868,13 @@ class _RecentAlertsCard extends StatelessWidget {
 /// Inventory Watchlist table card (`46:580`).
 class _InventoryWatchlistCard extends StatelessWidget {
   final List<InventoryWatchlistItemData> items;
+  final bool showAddMedicine;
   final VoidCallback onReceiveBatch;
   final VoidCallback onAddMedicine;
 
   const _InventoryWatchlistCard({
     required this.items,
+    this.showAddMedicine = true,
     required this.onReceiveBatch,
     required this.onAddMedicine,
   });
@@ -900,13 +920,14 @@ class _InventoryWatchlistCard extends StatelessWidget {
                     size: MmButtonSize.small,
                     onPressed: onReceiveBatch,
                   ),
-                  MmButton(
-                    label: 'Add Medicine',
-                    leadingIconAsset: AppAssets.iconPlusSm,
-                    variant: MmButtonVariant.primary,
-                    size: MmButtonSize.small,
-                    onPressed: onAddMedicine,
-                  ),
+                  if (showAddMedicine)
+                    MmButton(
+                      label: 'Add Medicine',
+                      leadingIconAsset: AppAssets.iconPlusSm,
+                      variant: MmButtonVariant.primary,
+                      size: MmButtonSize.small,
+                      onPressed: onAddMedicine,
+                    ),
                 ],
               ),
             ],
