@@ -3,9 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_assets.dart';
 import '../../config/app_theme.dart';
+import '../../models/alert_model.dart';
 import '../../models/dashboard_models.dart';
+import '../../providers/alert_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/dashboard_provider.dart';
+import '../../utils/formatters.dart';
 import '../../widgets/alert_feed_item.dart';
 import '../../widgets/brand_emblem.dart';
 import '../../widgets/daily_sales_bar.dart';
@@ -14,6 +17,7 @@ import '../../widgets/kpi_summary_card.dart';
 import '../../widgets/mm_button.dart';
 import '../../widgets/pos_search_bar.dart';
 import '../../widgets/sidebar_nav_item.dart';
+import '../alerts/alerts_screen.dart';
 import '../medicines/medicines_screen.dart';
 
 /// Responsive width breakpoints for the Medixmart Plus Admin Dashboard.
@@ -39,11 +43,44 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late final TextEditingController _searchController;
   bool _pendingOpenAddMedicine = false;
+  bool _alertPreviewQueued = false;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
+    _scheduleDashboardAlertLoad();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _scheduleDashboardAlertLoad();
+  }
+
+  void _scheduleDashboardAlertLoad() {
+    if (_alertPreviewQueued) return;
+    final authProvider = context.read<AuthProvider?>();
+    final alertProvider = context.read<AlertProvider?>();
+    if (authProvider?.isAuthenticated != true ||
+        alertProvider == null ||
+        alertProvider.hasLoadedDashboardPreview ||
+        alertProvider.isDashboardLoading) {
+      return;
+    }
+    _alertPreviewQueued = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _alertPreviewQueued = false;
+      if (!mounted) return;
+      final auth = context.read<AuthProvider?>();
+      final alerts = context.read<AlertProvider?>();
+      if (auth?.isAuthenticated == true &&
+          alerts != null &&
+          !alerts.hasLoadedDashboardPreview &&
+          !alerts.isDashboardLoading) {
+        alerts.ensureDashboardLoaded();
+      }
+    });
   }
 
   @override
@@ -74,11 +111,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (closeDrawer) {
       Navigator.of(context).maybePop();
     }
-    if (item.id == 'dashboard' || item.id == 'medicines') {
+    if (item.id == 'dashboard' ||
+        item.id == 'medicines' ||
+        item.id == 'alerts') {
       context.read<DashboardProvider>().selectNavItem(item.id);
       return;
     }
     _showWorkflowFeedback(context, '${item.label} module is coming soon.');
+  }
+
+  void _openAlertsWithFilter(AlertType type) {
+    context.read<AlertProvider?>()?.applyQuickFilter(type: type);
+    context.read<DashboardProvider>().selectNavItem('alerts');
   }
 
   @override
@@ -94,39 +138,52 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         final showPermanentSidebar =
             constraints.maxWidth >= _DashboardBreakpoints.desktopSidebar;
 
-        final Widget mainArea = selectedNavId == 'medicines'
-            ? MedicinesScreen(
-                showMenuButton: !showPermanentSidebar,
-                onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-                openCreateOnMount: _pendingOpenAddMedicine,
-                onCreateDialogHandled: () {
-                  if (mounted && _pendingOpenAddMedicine) {
-                    setState(() => _pendingOpenAddMedicine = false);
-                  }
-                },
-              )
-            : _DashboardMainArea(
-                searchController: _searchController,
-                showMenuButton: !showPermanentSidebar,
-                showAddMedicine: showAddMedicine,
-                onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
-                onNewSale: () => _showWorkflowFeedback(
-                  context,
-                  'Opening POS Checkout for New Sale...',
-                ),
-                onViewAllAlerts: () => _showWorkflowFeedback(
-                  context,
-                  'Alerts module is coming soon.',
-                ),
-                onReceiveBatch: () => _showWorkflowFeedback(
-                  context,
-                  'Receive Batches module is coming soon.',
-                ),
-                onAddMedicine: () {
-                  setState(() => _pendingOpenAddMedicine = true);
-                  context.read<DashboardProvider>().selectNavItem('medicines');
-                },
-              );
+        final Widget mainArea;
+        if (selectedNavId == 'medicines') {
+          mainArea = MedicinesScreen(
+            showMenuButton: !showPermanentSidebar,
+            onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+            openCreateOnMount: _pendingOpenAddMedicine,
+            onCreateDialogHandled: () {
+              if (mounted && _pendingOpenAddMedicine) {
+                setState(() => _pendingOpenAddMedicine = false);
+              }
+            },
+          );
+        } else if (selectedNavId == 'alerts') {
+          mainArea = AlertsScreen(
+            showMenuButton: !showPermanentSidebar,
+            onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+          );
+        } else {
+          mainArea = _DashboardMainArea(
+            searchController: _searchController,
+            showMenuButton: !showPermanentSidebar,
+            showAddMedicine: showAddMedicine,
+            onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+            onNewSale: () => _showWorkflowFeedback(
+              context,
+              'Opening POS Checkout for New Sale...',
+            ),
+            onViewAllAlerts: () =>
+                context.read<DashboardProvider>().selectNavItem('alerts'),
+            onKpiTap: (metric) {
+              if (metric == KpiMetricType.lowStock) {
+                _openAlertsWithFilter(AlertType.lowStock);
+              } else if (metric == KpiMetricType.expiring7M) {
+                _openAlertsWithFilter(AlertType.expiryWarning);
+              }
+            },
+            onReceiveBatch: () => _showWorkflowFeedback(
+              context,
+              'Receive Batches module is coming soon.',
+            ),
+            onAddMedicine: () {
+              setState(() => _pendingOpenAddMedicine = true);
+              context.read<DashboardProvider>().selectNavItem('medicines');
+            },
+          );
+        }
 
         return Scaffold(
           key: _scaffoldKey,
@@ -175,6 +232,7 @@ class _DashboardSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dashboardProvider = context.watch<DashboardProvider>();
+    final alertProvider = context.watch<AlertProvider?>();
     final authUser = context.watch<AuthProvider?>()?.user;
 
     final userInitials =
@@ -253,7 +311,15 @@ class _DashboardSidebar extends StatelessWidget {
                     SidebarNavItem(
                       label: dashboardProvider.navItems[i].label,
                       iconAsset: dashboardProvider.navItems[i].iconAsset,
-                      badgeCount: dashboardProvider.navItems[i].badgeCount,
+                      badgeCount: (dashboardProvider.navItems[i].id ==
+                                  'alerts' &&
+                              alertProvider != null &&
+                              alertProvider.hasLoadedDashboardPreview &&
+                              alertProvider.summary != null)
+                          ? (alertProvider.summary!.totalActive > 0
+                              ? alertProvider.summary!.totalActive
+                              : null)
+                          : dashboardProvider.navItems[i].badgeCount,
                       isActive: dashboardProvider.selectedNavId ==
                           dashboardProvider.navItems[i].id,
                       onTap: () => onNavTap(dashboardProvider.navItems[i]),
@@ -363,6 +429,7 @@ class _DashboardMainArea extends StatelessWidget {
   final VoidCallback onOpenDrawer;
   final VoidCallback onNewSale;
   final VoidCallback onViewAllAlerts;
+  final ValueChanged<KpiMetricType>? onKpiTap;
   final VoidCallback onReceiveBatch;
   final VoidCallback onAddMedicine;
 
@@ -373,6 +440,7 @@ class _DashboardMainArea extends StatelessWidget {
     required this.onOpenDrawer,
     required this.onNewSale,
     required this.onViewAllAlerts,
+    this.onKpiTap,
     required this.onReceiveBatch,
     required this.onAddMedicine,
   });
@@ -380,6 +448,49 @@ class _DashboardMainArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dashboardProvider = context.watch<DashboardProvider>();
+    final alertProvider = context.watch<AlertProvider?>();
+    final hasLiveAlerts = alertProvider != null &&
+        alertProvider.hasLoadedDashboardPreview &&
+        alertProvider.summary != null;
+
+    final List<KpiCardData> effectiveKpiCards;
+    final String recentAlertsActionLabel;
+    final List<AlertItemData> recentAlerts;
+
+    if (hasLiveAlerts) {
+      final s = alertProvider.summary!;
+      effectiveKpiCards = dashboardProvider.kpiCards.map((card) {
+        if (card.metric == KpiMetricType.lowStock) {
+          return KpiCardData(
+            metric: card.metric,
+            title: card.title,
+            value:
+                '${MmFormatters.twoDigitCount(s.lowStockCount)} ${s.lowStockCount == 1 ? 'Item' : 'Items'}',
+            subtitle: card.subtitle,
+          );
+        }
+        if (card.metric == KpiMetricType.expiring7M) {
+          return KpiCardData(
+            metric: card.metric,
+            title: card.title,
+            value:
+                '${MmFormatters.twoDigitCount(s.expiringSoonCount)} ${s.expiringSoonCount == 1 ? 'Batch' : 'Batches'}',
+            subtitle: s.expiredCount > 0
+                ? '${s.expiredCount} expired · Eligible for return'
+                : 'Eligible for supplier return',
+          );
+        }
+        return card;
+      }).toList(growable: false);
+      recentAlertsActionLabel = 'View all (${s.totalActive})';
+      recentAlerts = alertProvider.dashboardPreviewAlerts
+          .map((a) => a.toDashboardAlertItem())
+          .toList(growable: false);
+    } else {
+      effectiveKpiCards = dashboardProvider.kpiCards;
+      recentAlertsActionLabel = AdminDashboardDefaults.recentAlertsActionLabel;
+      recentAlerts = dashboardProvider.recentAlerts;
+    }
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -427,8 +538,9 @@ class _DashboardMainArea extends StatelessWidget {
                   children: [
                     // KPI Grid (`46:448`)
                     _KpiSummaryGrid(
-                      cards: dashboardProvider.kpiCards,
+                      cards: effectiveKpiCards,
                       availableWidth: bodyContentWidth,
+                      onKpiTap: onKpiTap,
                     ),
                     const SizedBox(height: MmSpacing.xl),
 
@@ -449,9 +561,8 @@ class _DashboardMainArea extends StatelessWidget {
                           SizedBox(
                             width: 400,
                             child: _RecentAlertsCard(
-                              actionLabel: AdminDashboardDefaults
-                                  .recentAlertsActionLabel,
-                              alerts: dashboardProvider.recentAlerts,
+                              actionLabel: recentAlertsActionLabel,
+                              alerts: recentAlerts,
                               onViewAll: onViewAllAlerts,
                             ),
                           ),
@@ -464,9 +575,8 @@ class _DashboardMainArea extends StatelessWidget {
                       ),
                       const SizedBox(height: MmSpacing.xl),
                       _RecentAlertsCard(
-                        actionLabel:
-                            AdminDashboardDefaults.recentAlertsActionLabel,
-                        alerts: dashboardProvider.recentAlerts,
+                        actionLabel: recentAlertsActionLabel,
+                        alerts: recentAlerts,
                         onViewAll: onViewAllAlerts,
                       ),
                     ],
@@ -651,11 +761,22 @@ class _DashboardMainArea extends StatelessWidget {
 class _KpiSummaryGrid extends StatelessWidget {
   final List<KpiCardData> cards;
   final double availableWidth;
+  final ValueChanged<KpiMetricType>? onKpiTap;
 
   const _KpiSummaryGrid({
     required this.cards,
     required this.availableWidth,
+    this.onKpiTap,
   });
+
+  VoidCallback? _tapCallbackFor(KpiCardData card) {
+    if (onKpiTap == null) return null;
+    if (card.metric == KpiMetricType.lowStock ||
+        card.metric == KpiMetricType.expiring7M) {
+      return () => onKpiTap!(card.metric);
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -665,7 +786,12 @@ class _KpiSummaryGrid extends StatelessWidget {
         children: [
           for (var i = 0; i < cards.length; i++) ...[
             if (i > 0) const SizedBox(width: MmSpacing.lg),
-            Expanded(child: KpiSummaryCard.fromData(cards[i])),
+            Expanded(
+              child: KpiSummaryCard.fromData(
+                cards[i],
+                onTap: _tapCallbackFor(cards[i]),
+              ),
+            ),
           ],
         ],
       );
@@ -679,11 +805,19 @@ class _KpiSummaryGrid extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(child: KpiSummaryCard.fromData(cards[i])),
+              Expanded(
+                child: KpiSummaryCard.fromData(
+                  cards[i],
+                  onTap: _tapCallbackFor(cards[i]),
+                ),
+              ),
               const SizedBox(width: MmSpacing.lg),
               Expanded(
                 child: i + 1 < cards.length
-                    ? KpiSummaryCard.fromData(cards[i + 1])
+                    ? KpiSummaryCard.fromData(
+                        cards[i + 1],
+                        onTap: _tapCallbackFor(cards[i + 1]),
+                      )
                     : const SizedBox.shrink(),
               ),
             ],
@@ -703,7 +837,10 @@ class _KpiSummaryGrid extends StatelessWidget {
       children: [
         for (var i = 0; i < cards.length; i++) ...[
           if (i > 0) const SizedBox(height: MmSpacing.md),
-          KpiSummaryCard.fromData(cards[i]),
+          KpiSummaryCard.fromData(
+            cards[i],
+            onTap: _tapCallbackFor(cards[i]),
+          ),
         ],
       ],
     );
@@ -850,15 +987,27 @@ class _RecentAlertsCard extends StatelessWidget {
           ),
           const SizedBox(height: MmSpacing.md),
           // Alerts List (`46:531`)
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var i = 0; i < alerts.length; i++) ...[
-                if (i > 0) const SizedBox(height: MmSpacing.sm),
-                AlertFeedItem.fromData(alerts[i]),
+          if (alerts.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: MmSpacing.xl),
+              child: Text(
+                'No active alerts right now.',
+                style: MmTypography.bodyMedium.copyWith(
+                  color: MmColors.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            )
+          else
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var i = 0; i < alerts.length; i++) ...[
+                  if (i > 0) const SizedBox(height: MmSpacing.sm),
+                  AlertFeedItem.fromData(alerts[i], onTap: onViewAll),
+                ],
               ],
-            ],
-          ),
+            ),
         ],
       ),
     );

@@ -684,6 +684,40 @@ void main() {
     );
     final apiClient = ApiClient(
       httpClient: MockClient((request) async {
+        if (request.method == 'GET' && request.url.path == '/api/alerts/summary') {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'total_active': 0,
+                'danger_count': 0,
+                'warning_count': 0,
+                'info_count': 0,
+                'expired_count': 0,
+                'expiring_soon_count': 0,
+                'low_stock_count': 0,
+              },
+            }),
+            200,
+          );
+        }
+        if (request.method == 'GET' && request.url.path == '/api/alerts') {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': [],
+              'meta': {
+                'page': 1,
+                'limit': 3,
+                'totalRecords': 0,
+                'totalPages': 1,
+                'hasNextPage': false,
+                'hasPrevPage': false,
+              },
+            }),
+            200,
+          );
+        }
         return http.Response(
           jsonEncode({
             'success': false,
@@ -851,6 +885,40 @@ void main() {
     );
     final apiClient = ApiClient(
       httpClient: MockClient((request) async {
+        if (request.method == 'GET' && request.url.path == '/api/alerts/summary') {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'total_active': 0,
+                'danger_count': 0,
+                'warning_count': 0,
+                'info_count': 0,
+                'expired_count': 0,
+                'expiring_soon_count': 0,
+                'low_stock_count': 0,
+              },
+            }),
+            200,
+          );
+        }
+        if (request.method == 'GET' && request.url.path == '/api/alerts') {
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': [],
+              'meta': {
+                'page': 1,
+                'limit': 3,
+                'totalRecords': 0,
+                'totalPages': 1,
+                'hasNextPage': false,
+                'hasPrevPage': false,
+              },
+            }),
+            200,
+          );
+        }
         if (request.method == 'GET' && request.url.path == '/api/categories') {
           return http.Response(
             jsonEncode({
