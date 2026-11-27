@@ -11,6 +11,7 @@ class KpiSummaryCard extends StatelessWidget {
   final String title;
   final String value;
   final String subtitle;
+  final String? iconAssetOverride;
   final VoidCallback? onTap;
 
   const KpiSummaryCard({
@@ -19,6 +20,7 @@ class KpiSummaryCard extends StatelessWidget {
     this.title = 'Outstanding Credit',
     this.value = 'Rs. 19,400.00',
     this.subtitle = '6 active customer accounts',
+    this.iconAssetOverride,
     this.onTap,
   });
 
@@ -118,7 +120,7 @@ class KpiSummaryCard extends StatelessWidget {
                       width: 18,
                       height: 18,
                       child: SvgPicture.asset(
-                        _iconAsset,
+                        iconAssetOverride ?? _iconAsset,
                         width: 18,
                         height: 18,
                       ),

@@ -14,6 +14,7 @@ class MmButton extends StatelessWidget {
   final MmButtonVariant variant;
   final MmButtonSize size;
   final VoidCallback? onPressed;
+  final bool isLoading;
 
   const MmButton({
     super.key,
@@ -22,6 +23,7 @@ class MmButton extends StatelessWidget {
     this.variant = MmButtonVariant.primary,
     this.size = MmButtonSize.medium,
     this.onPressed,
+    this.isLoading = false,
   });
 
   Color get _backgroundColor {
@@ -109,39 +111,58 @@ class MmButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final effectiveOnPressed = isLoading ? null : onPressed;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onPressed,
+        onTap: effectiveOnPressed,
         borderRadius: BorderRadius.circular(MmRadius.md),
-        child: Container(
-          padding: _padding,
-          decoration: BoxDecoration(
-            color: _backgroundColor,
-            borderRadius: BorderRadius.circular(MmRadius.md),
-            border: _border,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (leadingIconAsset != null) ...[
-                SizedBox(
-                  width: _iconSize,
-                  height: _iconSize,
-                  child: SvgPicture.asset(
-                    leadingIconAsset!,
+        child: Opacity(
+          opacity: effectiveOnPressed == null ? 0.65 : 1.0,
+          child: Container(
+            padding: _padding,
+            decoration: BoxDecoration(
+              color: _backgroundColor,
+              borderRadius: BorderRadius.circular(MmRadius.md),
+              border: _border,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (isLoading) ...[
+                  SizedBox(
                     width: _iconSize,
                     height: _iconSize,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(_textColor),
+                    ),
+                  ),
+                  SizedBox(width: _gap),
+                ] else if (leadingIconAsset != null) ...[
+                  SizedBox(
+                    width: _iconSize,
+                    height: _iconSize,
+                    child: SvgPicture.asset(
+                      leadingIconAsset!,
+                      width: _iconSize,
+                      height: _iconSize,
+                    ),
+                  ),
+                  SizedBox(width: _gap),
+                ],
+                Flexible(
+                  child: Text(
+                    label,
+                    style: _textStyle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                SizedBox(width: _gap),
               ],
-              Text(
-                label,
-                style: _textStyle,
-              ),
-            ],
+            ),
           ),
         ),
       ),

@@ -5,10 +5,12 @@ import 'providers/alert_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/dashboard_provider.dart';
 import 'providers/medicine_provider.dart';
+import 'providers/staff_user_provider.dart';
 import 'screens/auth/auth_gate.dart';
 import 'services/alert_service.dart';
 import 'services/api_client.dart';
 import 'services/medicine_service.dart';
+import 'services/staff_user_service.dart';
 
 void main() {
   runApp(const MedixmartApp());
@@ -20,6 +22,7 @@ class MedixmartApp extends StatefulWidget {
   final ApiClient? apiClient;
   final MedicineProvider? medicineProvider;
   final AlertProvider? alertProvider;
+  final StaffUserProvider? staffUserProvider;
 
   const MedixmartApp({
     super.key,
@@ -28,6 +31,7 @@ class MedixmartApp extends StatefulWidget {
     this.apiClient,
     this.medicineProvider,
     this.alertProvider,
+    this.staffUserProvider,
   });
 
   @override
@@ -43,12 +47,15 @@ class _MedixmartAppState extends State<MedixmartApp> {
   late final MedicineProvider _medicineProvider;
   late final AlertService _alertService;
   late final AlertProvider _alertProvider;
+  late final StaffUserService _staffUserService;
+  late final StaffUserProvider _staffUserProvider;
 
   late final bool _ownsAuthProvider;
   late final bool _ownsDashboardProvider;
   late final bool _ownsApiClient;
   late final bool _ownsMedicineProvider;
   late final bool _ownsAlertProvider;
+  late final bool _ownsStaffUserProvider;
 
   @override
   void initState() {
@@ -80,6 +87,12 @@ class _MedixmartAppState extends State<MedixmartApp> {
     _alertProvider =
         widget.alertProvider ?? AlertProvider(service: _alertService);
 
+    _staffUserService = StaffUserService(_apiClient);
+
+    _ownsStaffUserProvider = widget.staffUserProvider == null;
+    _staffUserProvider = widget.staffUserProvider ??
+        StaffUserProvider(service: _staffUserService);
+
     _authProvider.addListener(_handleAuthStateChanged);
   }
 
@@ -87,6 +100,7 @@ class _MedixmartAppState extends State<MedixmartApp> {
     if (!_authProvider.isAuthenticated) {
       _medicineProvider.reset();
       _alertProvider.reset();
+      _staffUserProvider.reset();
       _dashboardProvider.selectNavItem('dashboard');
       _navigatorKey.currentState?.popUntil((route) => route.isFirst);
     }
@@ -95,6 +109,7 @@ class _MedixmartAppState extends State<MedixmartApp> {
   @override
   void dispose() {
     _authProvider.removeListener(_handleAuthStateChanged);
+    if (_ownsStaffUserProvider) _staffUserProvider.dispose();
     if (_ownsAlertProvider) _alertProvider.dispose();
     if (_ownsMedicineProvider) _medicineProvider.dispose();
     if (_ownsApiClient) _apiClient.close();
@@ -119,6 +134,10 @@ class _MedixmartAppState extends State<MedixmartApp> {
         Provider<AlertService>.value(value: _alertService),
         ChangeNotifierProvider<AlertProvider>.value(
           value: _alertProvider,
+        ),
+        Provider<StaffUserService>.value(value: _staffUserService),
+        ChangeNotifierProvider<StaffUserProvider>.value(
+          value: _staffUserProvider,
         ),
       ],
       child: MaterialApp(

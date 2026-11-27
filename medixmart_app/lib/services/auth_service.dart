@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/api_exception.dart';
+import '../models/staff_user_model.dart';
 import '../models/user_model.dart';
 
 export '../models/api_exception.dart';
@@ -43,6 +44,17 @@ class AuthService {
     final future = _client != null
         ? _client.get(url, headers: headers)
         : http.get(url, headers: headers);
+    return future.timeout(ApiConfig.receiveTimeout);
+  }
+
+  Future<http.Response> _put(
+    Uri url, {
+    required Map<String, String> headers,
+    Object? body,
+  }) {
+    final future = _client != null
+        ? _client.put(url, headers: headers, body: body)
+        : http.put(url, headers: headers, body: body);
     return future.timeout(ApiConfig.receiveTimeout);
   }
 
@@ -132,6 +144,52 @@ class AuthService {
       message: message,
       statusCode: response.statusCode,
     );
+  }
+
+  Future<ChangePasswordResult> changePassword(
+    String token, {
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final url = Uri.parse('$baseUrl/auth/change-password');
+    final http.Response response;
+    try {
+      response = await _put(
+        url,
+        headers: _headers(token: token),
+        body: jsonEncode({
+          'current_password': currentPassword,
+          'new_password': newPassword,
+          'confirm_password': confirmPassword,
+        }),
+      );
+    } on TimeoutException {
+      throw const ApiException(
+        code: 'REQUEST_TIMEOUT',
+        message: 'Server request timed out. Please try again.',
+        statusCode: 408,
+      );
+    } on http.ClientException {
+      throw const ApiException(
+        code: 'NETWORK_ERROR',
+        message:
+            'Unable to reach pharmacy server. Verify server status and LAN/Wi-Fi connection.',
+        statusCode: 0,
+      );
+    }
+
+    final body = _decodeJson(response);
+
+    if (response.statusCode >= 200 &&
+        response.statusCode < 300 &&
+        body['success'] == true) {
+      return ChangePasswordResult.fromJson(
+        body['data'] as Map<String, dynamic>,
+      );
+    }
+
+    throw ApiException.fromJson(body, response.statusCode);
   }
 
   Future<void> logout(String token) async {
