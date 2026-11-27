@@ -22,6 +22,7 @@ class MmInputField extends StatefulWidget {
   final MmInputSize size;
   final bool enabled;
   final bool readOnly;
+  final bool obscureText;
   final int maxLines;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
@@ -44,6 +45,7 @@ class MmInputField extends StatefulWidget {
     this.size = MmInputSize.medium,
     this.enabled = true,
     this.readOnly = false,
+    this.obscureText = false,
     this.maxLines = 1,
     this.keyboardType,
     this.textInputAction,
@@ -221,7 +223,8 @@ class _MmInputFieldState extends State<MmInputField> {
                       focusNode: _effectiveFocusNode,
                       enabled: widget.enabled,
                       readOnly: widget.readOnly,
-                      maxLines: widget.maxLines,
+                      obscureText: widget.obscureText,
+                      maxLines: widget.obscureText ? 1 : widget.maxLines,
                       keyboardType: widget.keyboardType,
                       textInputAction: widget.textInputAction,
                       inputFormatters: widget.inputFormatters,

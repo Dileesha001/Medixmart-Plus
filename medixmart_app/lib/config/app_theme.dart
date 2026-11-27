@@ -26,9 +26,11 @@ abstract final class MmColors {
 
   // Border tokens
   static const Color borderDefault = Color(0xFFE2E8F0);
+  static const Color borderStrong = Color(0xFFCBD5E1);
   static const Color borderBrand = Color(0xFF49944F);
   static const Color borderWarning = Color(0xFFF59E0B);
   static const Color borderDanger = Color(0xFFEE4655);
+  static const Color borderInfo = Color(0xFF3B82F6);
 
   // Icon tokens
   static const Color iconPrimary = Color(0xFF334155);
@@ -69,6 +71,22 @@ abstract final class MmElevation {
       offset: Offset(0, 1),
       blurRadius: 2,
       spreadRadius: 0,
+    ),
+  ];
+
+  /// Elevation/MD: modal and dialog drop shadow matching Figma `Elevation/MD`.
+  static const List<BoxShadow> md = [
+    BoxShadow(
+      color: Color(0x140F1729),
+      offset: Offset(0, 8),
+      blurRadius: 16,
+      spreadRadius: -4,
+    ),
+    BoxShadow(
+      color: Color(0x0A0F1729),
+      offset: Offset(0, 2),
+      blurRadius: 6,
+      spreadRadius: -1,
     ),
   ];
 }

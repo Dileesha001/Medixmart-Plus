@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import '../../config/app_assets.dart';
 import '../../config/app_theme.dart';
@@ -17,6 +18,7 @@ import '../../widgets/kpi_summary_card.dart';
 import '../../widgets/mm_button.dart';
 import '../../widgets/pos_search_bar.dart';
 import '../../widgets/sidebar_nav_item.dart';
+import '../administration/staff_security_screen.dart';
 import '../alerts/alerts_screen.dart';
 import '../medicines/medicines_screen.dart';
 
@@ -125,6 +127,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     context.read<DashboardProvider>().selectNavItem('alerts');
   }
 
+  void _openAdministration({required bool closeDrawer}) {
+    if (closeDrawer) {
+      Navigator.of(context).maybePop();
+    }
+    context.read<DashboardProvider>().selectNavItem('administration');
+  }
+
   @override
   Widget build(BuildContext context) {
     final selectedNavId = context.select<DashboardProvider, String>(
@@ -152,6 +161,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           );
         } else if (selectedNavId == 'alerts') {
           mainArea = AlertsScreen(
+            showMenuButton: !showPermanentSidebar,
+            onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
+          );
+        } else if (selectedNavId == 'administration') {
+          mainArea = StaffSecurityScreen(
             showMenuButton: !showPermanentSidebar,
             onOpenDrawer: () => _scaffoldKey.currentState?.openDrawer(),
           );
@@ -198,6 +212,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     child: _DashboardSidebar(
                       onNavTap: (item) =>
                           _handleNavTap(item, closeDrawer: true),
+                      onAccountTap: () =>
+                          _openAdministration(closeDrawer: true),
                     ),
                   ),
                 ),
@@ -209,6 +225,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       _DashboardSidebar(
                         onNavTap: (item) =>
                             _handleNavTap(item, closeDrawer: false),
+                        onAccountTap: () =>
+                            _openAdministration(closeDrawer: false),
                       ),
                       Expanded(child: mainArea),
                     ],
@@ -224,9 +242,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 /// Left sidebar (`46:356`): Brand header, 7 navigation items, and Admin User footer.
 class _DashboardSidebar extends StatelessWidget {
   final ValueChanged<SidebarNavItemData> onNavTap;
+  final VoidCallback onAccountTap;
 
   const _DashboardSidebar({
     required this.onNavTap,
+    required this.onAccountTap,
   });
 
   @override
@@ -331,14 +351,10 @@ class _DashboardSidebar extends StatelessWidget {
           ),
           const SizedBox(height: MmSpacing.md),
 
-          // Admin User (`46:424`)
+          // Admin User (`46:424` / Active `66:143`)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.only(
-              top: MmSpacing.md,
-              left: MmSpacing.xs,
-              right: MmSpacing.xs,
-            ),
+            padding: const EdgeInsets.only(top: MmSpacing.md),
             decoration: const BoxDecoration(
               border: Border(
                 top: BorderSide(
@@ -347,72 +363,121 @@ class _DashboardSidebar extends StatelessWidget {
                 ),
               ),
             ),
-            child: Row(
-              children: [
-                // Avatar (`46:425`)
-                Container(
-                  width: 34,
-                  height: 34,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: MmColors.bgBrandSubtle,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: MmColors.borderBrand,
-                      width: MmElevation.strokeThin,
-                    ),
+            child: Builder(
+              builder: (context) {
+                final isAccountActive =
+                    dashboardProvider.selectedNavId == 'administration';
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: MmSpacing.sm,
+                    vertical: MmSpacing.sm,
                   ),
-                  child: Text(
-                    userInitials,
-                    style: MmTypography.labelSmall.copyWith(
-                      color: MmColors.textBrand,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: MmSpacing.sm),
-                // User Details (`46:427`)
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+                  decoration: isAccountActive
+                      ? BoxDecoration(
+                          color: MmColors.bgBrandSubtle,
+                          borderRadius: BorderRadius.circular(MmRadius.md),
+                          border: Border.all(
+                            color: MmColors.borderBrand,
+                            width: MmElevation.strokeThin,
+                          ),
+                        )
+                      : null,
+                  child: Row(
                     children: [
-                      Text(
-                        userName,
-                        style: MmTypography.labelMedium.copyWith(
-                          color: MmColors.textPrimary,
+                      Expanded(
+                        child: InkWell(
+                          key: const Key('sidebar_account_button'),
+                          onTap: onAccountTap,
+                          borderRadius: BorderRadius.circular(MmRadius.sm),
+                          child: Row(
+                            children: [
+                              // Avatar (`46:425` / Active `66:145`)
+                              Container(
+                                width: 34,
+                                height: 34,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  color: isAccountActive
+                                      ? MmColors.bgBrand
+                                      : MmColors.bgBrandSubtle,
+                                  shape: BoxShape.circle,
+                                  border: isAccountActive
+                                      ? null
+                                      : Border.all(
+                                          color: MmColors.borderBrand,
+                                          width: MmElevation.strokeThin,
+                                        ),
+                                ),
+                                child: Text(
+                                  userInitials,
+                                  style: MmTypography.labelSmall.copyWith(
+                                    color: isAccountActive
+                                        ? MmColors.textOnBrand
+                                        : MmColors.textBrand,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: MmSpacing.sm),
+                              // User Details (`46:427` / Active `66:147`)
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      userName,
+                                      style: MmTypography.labelMedium.copyWith(
+                                        color: isAccountActive
+                                            ? MmColors.textBrand
+                                            : MmColors.textPrimary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: MmSpacing.xxs),
+                                    Text(
+                                      userRole,
+                                      style: MmTypography.bodySmall.copyWith(
+                                        color: MmColors.textSecondary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (isAccountActive) ...[
+                                const SizedBox(width: MmSpacing.xs),
+                                SvgPicture.asset(
+                                  AppAssets.iconSettings,
+                                  width: 16,
+                                  height: 16,
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: MmSpacing.xxs),
-                      Text(
-                        userRole,
-                        style: MmTypography.bodySmall.copyWith(
+                      const SizedBox(width: MmSpacing.xs),
+                      IconButton(
+                        key: const Key('sidebar_logout_button'),
+                        tooltip: 'Sign out',
+                        onPressed: () {
+                          context.read<AuthProvider?>()?.logout();
+                        },
+                        icon: const Icon(
+                          Icons.logout_rounded,
+                          size: 18,
                           color: MmColors.textSecondary,
                         ),
-                        overflow: TextOverflow.ellipsis,
+                        style: IconButton.styleFrom(
+                          minimumSize: const Size(32, 32),
+                          padding: EdgeInsets.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
                       ),
                     ],
                   ),
-                ),
-                const SizedBox(width: MmSpacing.xs),
-                IconButton(
-                  key: const Key('sidebar_logout_button'),
-                  tooltip: 'Sign out',
-                  onPressed: () {
-                    context.read<AuthProvider?>()?.logout();
-                  },
-                  icon: const Icon(
-                    Icons.logout_rounded,
-                    size: 18,
-                    color: MmColors.textSecondary,
-                  ),
-                  style: IconButton.styleFrom(
-                    minimumSize: const Size(32, 32),
-                    padding: EdgeInsets.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                ),
-              ],
+                );
+              },
             ),
           ),
         ],

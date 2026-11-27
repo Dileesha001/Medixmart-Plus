@@ -29,9 +29,18 @@ abstract final class AppAssets {
   static const String navCustomers = 'assets/icons/nav_customers.svg';
   static const String navReports = 'assets/icons/nav_reports.svg';
 
-  // Action Button Icons
+  // Action Button & Administration Icons
   static const String iconPlusMd = 'assets/icons/icon_plus_md.svg';
   static const String iconReceiveBatchSm =
       'assets/icons/icon_receive_batch_sm.svg';
   static const String iconPlusSm = 'assets/icons/icon_plus_sm.svg';
+  static const String iconShieldCheck = 'assets/icons/icon_shield_check.svg';
+  static const String iconLock = 'assets/icons/icon_lock.svg';
+  static const String iconSettings = 'assets/icons/icon_settings.svg';
+  static const String iconRefresh = 'assets/icons/icon_refresh.svg';
+  static const String iconCheckBrand = 'assets/icons/icon_check_brand.svg';
+  static const String iconCheckOnBrand = 'assets/icons/icon_check_on_brand.svg';
+  static const String iconCheckKpi = 'assets/icons/icon_check_kpi.svg';
+  static const String iconUser = 'assets/icons/icon_user.svg';
+  static const String iconMenu = 'assets/icons/icon_menu.svg';
 }

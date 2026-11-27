@@ -39,9 +39,11 @@ class AuthProvider extends ChangeNotifier {
 
   AuthStatus _status;
   bool _isRestoringSession = false;
+  bool _isChangingPassword = false;
   UserModel? _user;
   String? _token;
   String? _errorMessage;
+  DateTime? _lastPasswordChangedAt;
 
   AuthProvider({
     AuthService? authService,
@@ -59,9 +61,11 @@ class AuthProvider extends ChangeNotifier {
   AuthStatus get status => _status;
   bool get isRestoringSession => _isRestoringSession;
   bool get isSubmitting => _status == AuthStatus.loading && !_isRestoringSession;
+  bool get isChangingPassword => _isChangingPassword;
   UserModel? get user => _user;
   String? get token => _token;
   String? get errorMessage => _errorMessage;
+  DateTime? get lastPasswordChangedAt => _lastPasswordChangedAt;
   bool get isAuthenticated => _status == AuthStatus.authenticated;
 
   void clearError() {
@@ -132,6 +136,66 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Rotates the authenticated user's password via `PUT /api/auth/change-password`.
+  ///
+  /// Persists the newly minted JWT token so this device remains signed in while
+  /// all prior sessions on other devices are invalidated server-side.
+  Future<String> changePassword({
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (_isChangingPassword) {
+      throw const ApiException(
+        code: 'REQUEST_IN_PROGRESS',
+        message: 'Password update is already in progress.',
+        statusCode: 0,
+      );
+    }
+
+    final activeToken = _token ?? await _storage.read(tokenStorageKey);
+    if (activeToken == null || activeToken.isEmpty) {
+      await handleSessionRevoked(
+        'Your session has expired. Please sign in again.',
+      );
+      throw const ApiException(
+        code: 'AUTH_MISSING_TOKEN',
+        message: 'Authentication token is missing.',
+        statusCode: 401,
+      );
+    }
+
+    _isChangingPassword = true;
+    notifyListeners();
+
+    try {
+      final result = await _authService.changePassword(
+        activeToken,
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+        confirmPassword: confirmPassword,
+      );
+      _token = result.token;
+      _user = UserModel(
+        id: result.user.id,
+        username: result.user.username,
+        role: result.user.role,
+        fullName: result.user.fullName ?? _user?.fullName,
+      );
+      _lastPasswordChangedAt = DateTime.now();
+      await _storage.write(tokenStorageKey, result.token);
+      return result.message;
+    } on ApiException catch (e) {
+      if (e.isSessionRevoked) {
+        await handleSessionRevoked(e.message);
+      }
+      rethrow;
+    } finally {
+      _isChangingPassword = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> logout() async {
     final activeToken = _token;
     if (activeToken != null) {
@@ -144,6 +208,7 @@ class AuthProvider extends ChangeNotifier {
     }
     _token = null;
     _user = null;
+    _lastPasswordChangedAt = null;
     _status = AuthStatus.unauthenticated;
     _errorMessage = null;
     notifyListeners();
@@ -158,8 +223,10 @@ class AuthProvider extends ChangeNotifier {
       // Proceed with local sign-out even if secure storage throws.
     }
     _isRestoringSession = false;
+    _isChangingPassword = false;
     _token = null;
     _user = null;
+    _lastPasswordChangedAt = null;
     _status = AuthStatus.unauthenticated;
     _errorMessage = (reason != null && reason.trim().isNotEmpty)
         ? reason

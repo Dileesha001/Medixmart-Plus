@@ -10,12 +10,14 @@ class StatusBadge extends StatelessWidget {
   final String? label;
   final bool showDot;
   final StatusTone tone;
+  final bool isMedium;
 
   const StatusBadge({
     super.key,
     this.label,
     this.showDot = true,
     this.tone = StatusTone.inStock,
+    this.isMedium = false,
   });
 
   Color get _backgroundColor {
@@ -69,11 +71,12 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveLabel = label ?? tone.defaultLabel;
+    final dotSize = isMedium ? 8.0 : 6.0;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: MmSpacing.sm,
-        vertical: MmSpacing.xxs,
+      padding: EdgeInsets.symmetric(
+        horizontal: isMedium ? MmSpacing.md : MmSpacing.sm,
+        vertical: isMedium ? MmSpacing.xs : MmSpacing.xxs,
       ),
       decoration: BoxDecoration(
         color: _backgroundColor,
@@ -88,12 +91,12 @@ class StatusBadge extends StatelessWidget {
         children: [
           if (showDot) ...[
             SizedBox(
-              width: 6,
-              height: 6,
+              width: dotSize,
+              height: dotSize,
               child: SvgPicture.asset(
                 _dotAsset,
-                width: 6,
-                height: 6,
+                width: dotSize,
+                height: dotSize,
               ),
             ),
             const SizedBox(width: MmSpacing.xs),
@@ -101,7 +104,8 @@ class StatusBadge extends StatelessWidget {
           Flexible(
             child: Text(
               effectiveLabel,
-              style: MmTypography.labelSmall.copyWith(color: _textColor),
+              style: (isMedium ? MmTypography.labelMedium : MmTypography.labelSmall)
+                  .copyWith(color: _textColor),
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),

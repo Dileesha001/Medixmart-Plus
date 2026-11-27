@@ -43,3 +43,12 @@ flutter:
     - assets/icons/icon_plus_md.svg
     - assets/icons/icon_receive_batch_sm.svg
     - assets/icons/icon_plus_sm.svg
+    - assets/icons/icon_shield_check.svg
+    - assets/icons/icon_lock.svg
+    - assets/icons/icon_settings.svg
+    - assets/icons/icon_refresh.svg
+    - assets/icons/icon_check_brand.svg
+    - assets/icons/icon_check_on_brand.svg
+    - assets/icons/icon_check_kpi.svg
+    - assets/icons/icon_user.svg
+    - assets/icons/icon_menu.svg

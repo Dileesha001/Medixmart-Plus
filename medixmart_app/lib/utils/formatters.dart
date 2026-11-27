@@ -54,4 +54,35 @@ abstract final class MmFormatters {
     final minute = twoDigitCount(local.minute);
     return '$day $month $year, $hour:$minute';
   }
+
+  /// Formats a [DateTime] in local time as `YYYY-MM-DD` (e.g. `2026-11-19`).
+  static String isoDate(DateTime dt) {
+    final local = dt.toLocal();
+    final month = twoDigitCount(local.month);
+    final day = twoDigitCount(local.day);
+    return '${local.year}-$month-$day';
+  }
+
+  /// Formats a [DateTime] in local time as `DD Mon YYYY` (e.g. `19 Nov 2026`).
+  static String dayMonthYear(DateTime dt) {
+    final local = dt.toLocal();
+    final day = twoDigitCount(local.day);
+    final month = _monthNames[local.month - 1];
+    return '$day $month ${local.year}';
+  }
+
+  /// Formats a [DateTime] in local time as `DD Mon` (e.g. `19 Nov`).
+  static String dayMonth(DateTime dt) {
+    final local = dt.toLocal();
+    final day = twoDigitCount(local.day);
+    final month = _monthNames[local.month - 1];
+    return '$day $month';
+  }
+
+  /// Formats a [DateTime] in local time as `Mon YYYY` (e.g. `Oct 2026`).
+  static String monthYear(DateTime dt) {
+    final local = dt.toLocal();
+    final month = _monthNames[local.month - 1];
+    return '$month ${local.year}';
+  }
 }
