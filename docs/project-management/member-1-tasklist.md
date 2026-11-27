@@ -247,16 +247,16 @@ flowchart TD
   - **Dependencies:** M1-W5-01.
   - **Verification:** Verified via [`tests/integration/run_expiry_job_test.js`](../../medixmart-backend/tests/integration/run_expiry_job_test.js): Startup catch-up trigger, manual trigger, concurrency locking, and clean shutdown pass 5/5 assertions. All 10 backend test suites pass.
 
-- [ ] **M1-W5-03: Review Sale Locking and Rollback**
-  - **Deliverable:** Concurrency review and transaction validation for Member 4's sales engine.
+- [x] **M1-W5-03: Review Sale Locking and Rollback**
+  - **Deliverable:** Canonical sales transaction engine in [`src/services/sale.service.js`](../../medixmart-backend/src/services/sale.service.js), POS controller in [`src/controllers/sale.controller.js`](../../medixmart-backend/src/controllers/sale.controller.js), endpoints in [`src/routes/sale.routes.js`](../../medixmart-backend/src/routes/sale.routes.js), and concurrency review document in [`docs/architecture/sale-transaction-concurrency-review.md`](../architecture/sale-transaction-concurrency-review.md).
   - **Action Items:**
-    - Review `POST /api/sales` transaction boundaries: ensure single client connection (`pool.connect()`) used throughout.
-    - Verify pessimistic row locking on batches: `SELECT ... FROM batches WHERE id = $1 FOR UPDATE`.
-    - Enforce Expiry-First (FEFO) ordering: batches must be locked and deducted in ascending `expiry_date` order.
-    - Verify customer credit update occurs inside the exact same database transaction.
-    - Ensure complete `ROLLBACK` on any failure (insufficient stock, credit check failure, network drop).
+    - [x] Review and establish `POST /api/sales` transaction boundaries using dedicated client (`db.getClient()`) with explicit `BEGIN`, `COMMIT`, `ROLLBACK`, and `finally { client.release() }`.
+    - [x] Enforce pessimistic row-level locking on batches: `SELECT ... FROM batches WHERE ... FOR UPDATE` with deterministic ordering by `medicine_id` to prevent deadlock conditions (`40P01`).
+    - [x] Enforce strict Expiry-First (FEFO) allocation: batches ordered by `expiry_date ASC, id ASC`, excluding expired batches (`expiry_date < CURRENT_DATE`).
+    - [x] Verify atomic customer credit update in the exact same transaction, validating credit limits and preventing unbounded debt.
+    - [x] Guarantee comprehensive `ROLLBACK` on any error (stock shortages, credit limit violations, expired batch requests), preventing partial deductions or orphaned records.
   - **Dependencies:** M4 sales engine; M6 QA concurrency test harness.
-  - **Verification:** Simulated concurrent checkouts on identical stock never oversell or leave orphaned transactions.
+  - **Verification:** Verified via [`tests/integration/run_sale_concurrency_test.js`](../../medixmart-backend/tests/integration/run_sale_concurrency_test.js): FEFO multi-batch allocation, credit limit enforcement with complete rollback, 5-way simultaneous race condition competing for 10 units with zero overselling, expired batch rejection, and sale detail retrieval pass 7/7 assertions. All 11 test suites pass with 100% green.
 
 ---
 
